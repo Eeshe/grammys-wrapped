@@ -5,6 +5,7 @@ package me.eeshe.grammyswrapped;
 
 import java.util.EnumSet;
 
+import me.eeshe.grammyswrapped.util.BotConfig;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Member;
@@ -26,8 +27,19 @@ public class App extends ListenerAdapter {
   }
 
   public static void main(String[] args) {
+    BotConfig botConfig = new BotConfig();
+
+    startBot(botConfig);
+  }
+
+  private static void startBot(BotConfig botConfig) {
+    String botToken = botConfig.getBotToken();
+    if (botToken == null) {
+      System.out.println("Bot token not provided.");
+      return;
+    }
     JDABuilder.createDefault(
-        "TOKEN",
+        botToken,
         EnumSet.of(
             GatewayIntent.GUILD_PRESENCES,
             GatewayIntent.GUILD_MEMBERS,
@@ -42,7 +54,11 @@ public class App extends ListenerAdapter {
 
   @Override
   public void onGenericUserPresence(GenericUserPresenceEvent event) {
-    System.out.println("PRESENCE");
+    Member member = event.getMember();
+    System.out.println(member.getNickname() + "'S ACTIVITIES");
+    for (Activity activity : member.getActivities()) {
+      System.out.println(activity.getName());
+    }
   }
 
   @Override
