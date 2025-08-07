@@ -1,1 +1,6 @@
 discord.bot.token = DISCORD_TOKEN
+postgresql.host = POSTGRESQL_HOST
+postgresql.port = POSTGRESQL_PORT
+postgresql.database = POSTGRESQL_DATABASE
+postgresql.username = POSTGRESQL_USERNAME
+postgresql.password = POSTGRESQL_PASSWORD

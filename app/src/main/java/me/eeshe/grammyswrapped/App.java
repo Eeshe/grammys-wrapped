@@ -3,23 +3,7 @@
  */
 package me.eeshe.grammyswrapped;
 
-import java.util.EnumSet;
-
-import me.eeshe.grammyswrapped.util.BotConfig;
-import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceSelfDeafenEvent;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceSelfMuteEvent;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.api.events.user.UserActivityEndEvent;
-import net.dv8tion.jda.api.events.user.UserActivityStartEvent;
-import net.dv8tion.jda.api.events.user.update.GenericUserPresenceEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.requests.GatewayIntent;
-import net.dv8tion.jda.api.utils.MemberCachePolicy;
-import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 public class App extends ListenerAdapter {
   public String getGreeting() {
@@ -27,91 +11,6 @@ public class App extends ListenerAdapter {
   }
 
   public static void main(String[] args) {
-    BotConfig botConfig = new BotConfig();
-
-    startBot(botConfig);
-  }
-
-  private static void startBot(BotConfig botConfig) {
-    String botToken = botConfig.getBotToken();
-    if (botToken == null) {
-      System.out.println("Bot token not provided.");
-      return;
-    }
-    JDABuilder.createDefault(
-        botToken,
-        EnumSet.of(
-            GatewayIntent.GUILD_PRESENCES,
-            GatewayIntent.GUILD_MEMBERS,
-            GatewayIntent.GUILD_VOICE_STATES,
-            GatewayIntent.GUILD_MESSAGES,
-            GatewayIntent.MESSAGE_CONTENT))
-        .addEventListeners(new App())
-        .enableCache(CacheFlag.ACTIVITY)
-        .setMemberCachePolicy(MemberCachePolicy.ONLINE)
-        .build();
-  }
-
-  @Override
-  public void onGenericUserPresence(GenericUserPresenceEvent event) {
-    Member member = event.getMember();
-    System.out.println(member.getNickname() + "'S ACTIVITIES");
-    for (Activity activity : member.getActivities()) {
-      System.out.println(activity.getName());
-    }
-  }
-
-  @Override
-  public void onUserActivityStart(UserActivityStartEvent event) {
-    System.out.println("STARTED ACTIVITY");
-  }
-
-  @Override
-  public void onUserActivityEnd(UserActivityEndEvent event) {
-    System.out.println("ENDED ACTIVITY");
-  }
-
-  @Override
-  public void onGuildVoiceUpdate(GuildVoiceUpdateEvent event) {
-    if (event.getChannelJoined() != null) {
-      System.out.println(event.getEntity().getNickname() + " JOINED VC CHANNEL");
-    }
-    if (event.getChannelLeft() != null) {
-      System.out.println(event.getEntity().getNickname() + " LEFT VC CHANNEL");
-    }
-    for (Member member : event.getGuild().getMembers()) {
-      System.out.println(member.getNickname());
-
-      System.out.println("ACTIVITIES: ");
-      for (Activity activity : member.getActivities()) {
-        System.out.println(activity.getName());
-      }
-    }
-  }
-
-  @Override
-  public void onGuildVoiceSelfMute(GuildVoiceSelfMuteEvent event) {
-    String user = event.getMember().getNickname();
-    if (event.getVoiceState().isSelfMuted()) {
-      System.out.println(user + " MUTED");
-    } else {
-      System.out.println(user + " UNMUTED");
-    }
-  }
-
-  @Override
-  public void onGuildVoiceSelfDeafen(GuildVoiceSelfDeafenEvent event) {
-    String user = event.getMember().getNickname();
-    if (event.getVoiceState().isSelfDeafened()) {
-      System.out.println(user + " DEAFENED");
-    } else {
-      System.out.println(user + " UNDEAFENDED");
-    }
-  }
-
-  @Override
-  public void onMessageReceived(MessageReceivedEvent event) {
-    System.out
-        .println("[" + event.getChannel() + "]: #" + event.getAuthor() + ":" + event.getMessage().getContentDisplay());
+    new Bot().start();
   }
 }
