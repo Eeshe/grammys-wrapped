@@ -1,5 +1,7 @@
 package me.eeshe.grammyswrapped.util;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -8,11 +10,13 @@ public class AppConfig {
 
   public AppConfig() {
     this.properties = new Properties();
-    try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("config.properties")) {
-      if (inputStream == null) {
-        System.out.println("Unable to find config.properties file.");
-        return;
-      }
+
+    File propertiesFile = new File("config.properties");
+    if (!propertiesFile.exists()) {
+      System.out.println("UNABLE TO FIND CONFIG.PROPERTIES FILE.");
+      return;
+    }
+    try (InputStream inputStream = new FileInputStream(propertiesFile)) {
       properties.load(inputStream);
     } catch (Exception e) {
       e.printStackTrace();
