@@ -4,11 +4,14 @@ import java.util.EnumSet;
 
 import me.eeshe.grammyswrapped.service.StatsService;
 import me.eeshe.grammyswrapped.util.AppConfig;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.RichPresence;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceSelfDeafenEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceSelfMuteEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
@@ -22,6 +25,7 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 public class Bot extends ListenerAdapter {
   private final StatsService statsService;
+  private JDA bot;
 
   public Bot() {
     this.statsService = new StatsService();
@@ -36,7 +40,7 @@ public class Bot extends ListenerAdapter {
     }
     statsService.createStatsTables();
 
-    JDABuilder.createDefault(
+    this.bot = JDABuilder.createDefault(
         botToken,
         EnumSet.of(
             GatewayIntent.GUILD_PRESENCES,
@@ -48,12 +52,6 @@ public class Bot extends ListenerAdapter {
         .enableCache(CacheFlag.ACTIVITY)
         .setMemberCachePolicy(MemberCachePolicy.ONLINE)
         .build();
-  }
-
-  private boolean hasEsquizogangRole(Member member) {
-    Role esquizogangRole = member.getGuild().getRoleById("1046078281981624380");
-
-    return member.getRoles().contains(esquizogangRole);
   }
 
   @Override
@@ -70,6 +68,11 @@ public class Bot extends ListenerAdapter {
     System.out.println(richPresence.getName());
     System.out.println(richPresence.getState());
     System.out.println(richPresence.getDetails());
+
+    statsService.logPresence(
+        member.getUser(),
+        true,
+        richPresence);
   }
 
   @Override
@@ -83,51 +86,65 @@ public class Bot extends ListenerAdapter {
 
     Activity newActivity = event.getOldActivity();
     RichPresence richPresence = newActivity.asRichPresence();
+    System.out.println(richPresence.getType().name());
     System.out.println(richPresence.getName());
     System.out.println(richPresence.getState());
     System.out.println(richPresence.getDetails());
+
+    statsService.logPresence(
+        member.getUser(),
+        false,
+        richPresence);
   }
 
   @Override
   public void onGuildVoiceUpdate(GuildVoiceUpdateEvent event) {
-    if (event.getChannelJoined() != null) {
-      System.out.println(event.getEntity().getNickname() + " JOINED VC CHANNEL");
-    }
-    if (event.getChannelLeft() != null) {
-      System.out.println(event.getEntity().getNickname() + " LEFT VC CHANNEL");
-    }
-    for (Member member : event.getGuild().getMembers()) {
-      System.out.println(member.getNickname());
-
-      for (Activity activity : member.getActivities()) {
-        System.out.println(activity.getName());
-      }
-    }
+    boolean joined = event.getChannelJoined() != null;
+    statsService.logVoiceChatConnection(
+        event.getEntity().getUser(),
+        joined);
   }
 
   @Override
   public void onGuildVoiceSelfMute(GuildVoiceSelfMuteEvent event) {
-    String user = event.getMember().getNickname();
-    if (event.getVoiceState().isSelfMuted()) {
-      System.out.println(user + " MUTED");
-    } else {
-      System.out.println(user + " UNMUTED");
+    if (!hasEsquizogangRole(event.getMember())) {
+      return;
     }
+    logVoiceChatEvent(
+        event.getMember().getUser(),
+        event.getVoiceState());
   }
 
   @Override
   public void onGuildVoiceSelfDeafen(GuildVoiceSelfDeafenEvent event) {
-    String user = event.getMember().getNickname();
-    if (event.getVoiceState().isSelfDeafened()) {
-      System.out.println(user + " DEAFENED");
-    } else {
-      System.out.println(user + " UNDEAFENDED");
+    if (!hasEsquizogangRole(event.getMember())) {
+      return;
     }
+    logVoiceChatEvent(
+        event.getMember().getUser(),
+        event.getVoiceState());
+  }
+
+  private void logVoiceChatEvent(User user, GuildVoiceState voiceState) {
+    statsService.logVoiceChatEvent(
+        user,
+        voiceState.isSelfMuted(),
+        voiceState.isSelfDeafened());
   }
 
   @Override
   public void onMessageReceived(MessageReceivedEvent event) {
-    System.out
-        .println("[" + event.getChannel() + "]: #" + event.getAuthor() + ":" + event.getMessage().getContentDisplay());
+    if (!hasEsquizogangRole(event.getMember())) {
+      return;
+    }
+    statsService.logMessage(
+        event.getAuthor(),
+        event.getMessage());
+  }
+
+  private boolean hasEsquizogangRole(Member member) {
+    Role esquizogangRole = member.getGuild().getRoleById("1046078281981624380");
+
+    return member.getRoles().contains(esquizogangRole);
   }
 }
