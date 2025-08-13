@@ -86,6 +86,9 @@ public class Bot extends ListenerAdapter {
 
     Activity newActivity = event.getOldActivity();
     RichPresence richPresence = newActivity.asRichPresence();
+    if (richPresence == null) {
+      return;
+    }
     System.out.println(richPresence.getType().name());
     System.out.println(richPresence.getName());
     System.out.println(richPresence.getState());

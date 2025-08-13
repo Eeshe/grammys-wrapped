@@ -10,6 +10,7 @@ import me.eeshe.grammyswrapped.database.PostgreSQLDatabase;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.RichPresence;
+import net.dv8tion.jda.api.entities.RichPresence.Image;
 import net.dv8tion.jda.api.entities.User;
 
 public class StatsService {
@@ -74,7 +75,9 @@ public class StatsService {
             "type VARCHAR(255), " +
             "name TEXT, " +
             "state TEXT, " +
-            "details TEXT" +
+            "details TEXT, " +
+            "large_image_text TEXT, " +
+            "small_image_text TEXT" +
             ")");
   }
 
@@ -142,9 +145,12 @@ public class StatsService {
     if (richPresence.getType() != null) {
       presenceType = richPresence.getType().name();
     }
+    String largeImageText = getImageText(richPresence.getLargeImage());
+    String smallImageText = getImageText(richPresence.getSmallImage());
 
-    String sql = "INSERT INTO " + PRESENCES_TABLE + " (user_id, starting, type, name, state, details) " +
-        "VALUES (?, ?, ?, ?, ?, ?)";
+    String sql = "INSERT INTO " + PRESENCES_TABLE +
+        " (user_id, starting, type, name, state, details, large_image_text, small_image_text) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     try (Connection connection = database.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
       preparedStatement.setString(1, user.getId());
@@ -154,10 +160,19 @@ public class StatsService {
       preparedStatement.setString(4, richPresence.getName());
       preparedStatement.setString(5, richPresence.getState());
       preparedStatement.setString(6, richPresence.getDetails());
+      preparedStatement.setString(7, largeImageText);
+      preparedStatement.setString(8, smallImageText);
 
       preparedStatement.executeUpdate();
     } catch (SQLException e) {
       e.printStackTrace();
     }
+  }
+
+  private String getImageText(Image image) {
+    if (image == null) {
+      return null;
+    }
+    return image.getText();
   }
 }
