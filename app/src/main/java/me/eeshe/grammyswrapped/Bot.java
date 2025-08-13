@@ -2,6 +2,8 @@ package me.eeshe.grammyswrapped;
 
 import java.util.EnumSet;
 
+import javax.annotation.Nonnull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +21,10 @@ import net.dv8tion.jda.api.events.guild.voice.GuildVoiceSelfDeafenEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceSelfMuteEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.session.SessionDisconnectEvent;
+import net.dv8tion.jda.api.events.session.SessionRecreateEvent;
+import net.dv8tion.jda.api.events.session.SessionResumeEvent;
+import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.events.user.UserActivityEndEvent;
 import net.dv8tion.jda.api.events.user.UserActivityStartEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -140,5 +146,27 @@ public class Bot extends ListenerAdapter {
     Role esquizogangRole = member.getGuild().getRoleById("1046078281981624380");
 
     return member.getRoles().contains(esquizogangRole);
+  }
+
+  @Override
+  public void onSessionDisconnect(SessionDisconnectEvent event) {
+    LOGGER.warn("Disconnected from Discord Gateway. Code: {} Message: {}", event.getCloseCode(),
+        event.getCloseCode().getMeaning());
+  }
+
+  @Override
+  public void onSessionResume(@Nonnull SessionResumeEvent event) {
+    LOGGER.info("Session has been resumed successfully!");
+  }
+
+  @Override
+  public void onSessionRecreate(SessionRecreateEvent event) {
+    LOGGER.info("Session has been recreated successfully!");
+  }
+
+  @Override
+  public void onShutdown(@Nonnull ShutdownEvent event) {
+    LOGGER.warn("JDA has been shut down. Code: {} Message: {}", event.getCloseCode(),
+        event.getCloseCode().getMeaning());
   }
 }
