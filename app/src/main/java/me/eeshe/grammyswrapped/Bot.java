@@ -2,6 +2,9 @@ package me.eeshe.grammyswrapped;
 
 import java.util.EnumSet;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import me.eeshe.grammyswrapped.service.StatsService;
 import me.eeshe.grammyswrapped.util.AppConfig;
 import net.dv8tion.jda.api.JDA;
@@ -24,6 +27,8 @@ import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 public class Bot extends ListenerAdapter {
+  private static final Logger LOGGER = LoggerFactory.getLogger(Bot.class);
+
   private final StatsService statsService;
   private JDA bot;
 
@@ -35,7 +40,7 @@ public class Bot extends ListenerAdapter {
     AppConfig botConfig = new AppConfig();
     String botToken = botConfig.getBotToken();
     if (botToken == null) {
-      System.out.println("Bot token not provided.");
+      LOGGER.error("Bot token not provided.");
       return;
     }
     statsService.createStatsTables();
@@ -60,15 +65,11 @@ public class Bot extends ListenerAdapter {
     if (!hasEsquizogangRole(member)) {
       return;
     }
-    System.out.println("-------------------------");
-    System.out.println(member.getUser().getName() + " started an activity");
-
     Activity newActivity = event.getNewActivity();
     RichPresence richPresence = newActivity.asRichPresence();
-    System.out.println(richPresence.getName());
-    System.out.println(richPresence.getState());
-    System.out.println(richPresence.getDetails());
-
+    if (richPresence == null) {
+      return;
+    }
     statsService.logPresence(
         member.getUser(),
         true,
@@ -81,19 +82,11 @@ public class Bot extends ListenerAdapter {
     if (!hasEsquizogangRole(member)) {
       return;
     }
-    System.out.println("------------------------------");
-    System.out.println(member.getUser().getName() + " ended an activity");
-
     Activity newActivity = event.getOldActivity();
     RichPresence richPresence = newActivity.asRichPresence();
     if (richPresence == null) {
       return;
     }
-    System.out.println(richPresence.getType().name());
-    System.out.println(richPresence.getName());
-    System.out.println(richPresence.getState());
-    System.out.println(richPresence.getDetails());
-
     statsService.logPresence(
         member.getUser(),
         false,
@@ -140,9 +133,7 @@ public class Bot extends ListenerAdapter {
     if (!hasEsquizogangRole(event.getMember())) {
       return;
     }
-    statsService.logMessage(
-        event.getAuthor(),
-        event.getMessage());
+    statsService.logMessage(event.getMessage());
   }
 
   private boolean hasEsquizogangRole(Member member) {

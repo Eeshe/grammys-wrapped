@@ -3,17 +3,22 @@ package me.eeshe.grammyswrapped.service;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.database.PostgreSQLDatabase;
+import me.eeshe.grammyswrapped.model.LoggableMessage;
+import me.eeshe.grammyswrapped.model.LoggablePresence;
+import me.eeshe.grammyswrapped.model.LoggableVoiceChatConnection;
+import me.eeshe.grammyswrapped.model.LoggableVoiceChatEvent;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.RichPresence;
-import net.dv8tion.jda.api.entities.RichPresence.Image;
 import net.dv8tion.jda.api.entities.User;
 
 public class StatsService {
+  private static final Logger LOGGER = LoggerFactory.getLogger(StatsService.class);
+
   private static final String MESSAGES_TABLE = "messages";
   private static final String VOICE_CHAT_CONNECTIONS_TABLE = "voice_chat_connections";
   private static final String VOICE_CHAT_EVENTS_TABLE = "voice_chat_events";
@@ -90,30 +95,32 @@ public class StatsService {
     }
   }
 
-  public void logMessage(User user, Message message) {
-    String content = message.getContentRaw();
-    List<String> attachmentUrls = new ArrayList<>();
-    String channelId = message.getChannelId();
-    for (Attachment attachment : message.getAttachments()) {
-      attachmentUrls.add(attachment.getUrl());
-    }
+  public void logMessage(Message message) {
+    LoggableMessage loggableMessage = LoggableMessage.fromMessage(message);
+    LOGGER.info("Logging message: {}", loggableMessage);
 
     String sql = "INSERT INTO " + MESSAGES_TABLE + " (user_id, channel_id, content, attachments)" +
         "VALUES (?, ?, ?, ?)";
     try (Connection connection = database.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-      preparedStatement.setString(1, user.getId());
-      preparedStatement.setString(2, channelId);
-      preparedStatement.setString(3, content);
-      preparedStatement.setArray(4, connection.createArrayOf("text", attachmentUrls.toArray()));
+      preparedStatement.setString(1, loggableMessage.userId());
+      preparedStatement.setString(2, loggableMessage.channelId());
+      preparedStatement.setString(3, loggableMessage.content());
+      preparedStatement.setArray(4, connection.createArrayOf("text", loggableMessage.attachmentUrls().toArray()));
 
       preparedStatement.executeUpdate();
+      LOGGER.info("Message logged.");
     } catch (SQLException e) {
-      e.printStackTrace();
+      LOGGER.error("Failed to log voice message. Data: {}", loggableMessage, e);
     }
   }
 
   public void logVoiceChatConnection(User user, boolean joined) {
+    LoggableVoiceChatConnection loggableVoiceChatConnection = new LoggableVoiceChatConnection(
+        user.getId(),
+        joined);
+    LOGGER.info("Logging voice chat connection: {}", loggableVoiceChatConnection);
+
     String sql = "INSERT INTO " + VOICE_CHAT_CONNECTIONS_TABLE + " (user_id, joined) VALUES (?, ?)";
     try (Connection connection = database.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -121,12 +128,19 @@ public class StatsService {
       preparedStatement.setBoolean(2, joined);
 
       preparedStatement.executeUpdate();
+      LOGGER.info("Voice chat connection logged.");
     } catch (SQLException e) {
-      e.printStackTrace();
+      LOGGER.error("Failed to log voice chat connection. Data: {}", loggableVoiceChatConnection, e);
     }
   }
 
   public void logVoiceChatEvent(User user, boolean muted, boolean deafened) {
+    LoggableVoiceChatEvent loggableVoiceChatEvent = new LoggableVoiceChatEvent(
+        user.getId(),
+        muted,
+        deafened);
+    LOGGER.info("Logging voice chat event: {}", loggableVoiceChatEvent);
+
     String sql = "INSERT INTO " + VOICE_CHAT_EVENTS_TABLE + " (user_id, muted, deafened) VALUES (?, ?, ?)";
     try (Connection connection = database.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -135,44 +149,36 @@ public class StatsService {
       preparedStatement.setBoolean(3, deafened);
 
       preparedStatement.executeUpdate();
+      LOGGER.info("Successfully logged voice chat event.");
     } catch (SQLException e) {
-      e.printStackTrace();
+      LOGGER.error("Failed to log voice chat event. Data: {}", loggableVoiceChatEvent, e);
     }
   }
 
   public void logPresence(User user, boolean starting, RichPresence richPresence) {
-    String presenceType = null;
-    if (richPresence.getType() != null) {
-      presenceType = richPresence.getType().name();
-    }
-    String largeImageText = getImageText(richPresence.getLargeImage());
-    String smallImageText = getImageText(richPresence.getSmallImage());
+    LoggablePresence loggablePresence = LoggablePresence.fromPresence(user, starting, richPresence);
+    LOGGER.info("Logging presence: {}", loggablePresence);
 
     String sql = "INSERT INTO " + PRESENCES_TABLE +
         " (user_id, starting, type, name, state, details, large_image_text, small_image_text) " +
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     try (Connection connection = database.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-      preparedStatement.setString(1, user.getId());
-      preparedStatement.setBoolean(2, starting);
-
-      preparedStatement.setString(3, presenceType);
-      preparedStatement.setString(4, richPresence.getName());
-      preparedStatement.setString(5, richPresence.getState());
-      preparedStatement.setString(6, richPresence.getDetails());
-      preparedStatement.setString(7, largeImageText);
-      preparedStatement.setString(8, smallImageText);
+      preparedStatement.setString(1, loggablePresence.userId());
+      preparedStatement.setBoolean(2, loggablePresence.starting());
+      preparedStatement.setString(3, loggablePresence.type());
+      preparedStatement.setString(4, loggablePresence.name());
+      preparedStatement.setString(5, loggablePresence.state());
+      preparedStatement.setString(6, loggablePresence.details());
+      preparedStatement.setString(7, loggablePresence.largeImageText());
+      preparedStatement.setString(8, loggablePresence.smallImageText());
 
       preparedStatement.executeUpdate();
+
+      LOGGER.info("Successfully logged presence.");
     } catch (SQLException e) {
-      e.printStackTrace();
+      LOGGER.error("Failed to log presence. Data: {}", loggablePresence, e);
     }
   }
 
-  private String getImageText(Image image) {
-    if (image == null) {
-      return null;
-    }
-    return image.getText();
-  }
 }
