@@ -9,7 +9,7 @@ app/.classpath
 gradle/wrapper/dists/
 
 # Config file
-app/src/main/resources/config.properties
+*config.properties
 
 # Neovim files
 .project

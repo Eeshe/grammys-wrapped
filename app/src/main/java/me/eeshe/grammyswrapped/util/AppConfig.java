@@ -46,4 +46,8 @@ public class AppConfig {
   public String getPostgreSQLPassword() {
     return properties.getProperty("postgresql.password");
   }
+
+  public String getTestGuildId() {
+    return properties.getProperty("test-guild.id");
+  }
 }

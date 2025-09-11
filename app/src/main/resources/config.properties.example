@@ -1,4 +1,5 @@
 discord.bot.token = DISCORD_TOKEN
+test-guild.id = TEST_GUILD_ID
 postgresql.host = POSTGRESQL_HOST
 postgresql.port = POSTGRESQL_PORT
 postgresql.database = POSTGRESQL_DATABASE
