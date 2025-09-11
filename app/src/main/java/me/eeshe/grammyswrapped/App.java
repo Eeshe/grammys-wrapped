@@ -3,9 +3,8 @@
  */
 package me.eeshe.grammyswrapped;
 
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
+public class App {
 
-public class App extends ListenerAdapter {
   public String getGreeting() {
     return "Hello World!";
   }
