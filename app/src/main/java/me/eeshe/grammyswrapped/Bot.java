@@ -66,9 +66,9 @@ public class Bot extends ListenerAdapter {
     try {
       bot.awaitReady();
       bot.getGuildById(new AppConfig().getTestGuildId()).updateCommands().addCommands(
-          Commands.slash("wrapped", "Muestra un resumen de la esquizogang dentro del tiempo definido.")
-              .addOption(OptionType.STRING, "fecha-inicial", "Fecha desde la que inicia el resumen", true)
-              .addOption(OptionType.STRING, "fecha-final", "Fecha hasta la que llega el resumen", true))
+          Commands.slash("wrapped", "Shows a summary of the Esquizogang within the specified dates")
+              .addOption(OptionType.STRING, "starting-date", "Date at which the summary will start", true)
+              .addOption(OptionType.STRING, "ending-date", "Date at which the summary will end", true))
           .queue(
               success -> LOGGER.info("Successfully registered commands."),
               failure -> LOGGER.error("Failed to register commands. {}", failure.getMessage()));

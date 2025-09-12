@@ -2,7 +2,11 @@ package me.eeshe.grammyswrapped.service;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +19,7 @@ import me.eeshe.grammyswrapped.model.LoggableVoiceChatEvent;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.RichPresence;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.Activity.ActivityType;
 
 public class StatsService {
   private static final Logger LOGGER = LoggerFactory.getLogger(StatsService.class);
@@ -181,4 +186,43 @@ public class StatsService {
     }
   }
 
+  public List<LoggablePresence> fetchPresences(Date startingDate, Date endingDate) {
+    LOGGER.info("Fetching presences entries from {} to {}.", startingDate, endingDate);
+
+    List<LoggablePresence> presences = new ArrayList<>();
+    String sql = "SELECT * FROM " + PRESENCES_TABLE + " WHERE date BETWEEN ? AND ?";
+    try (Connection connection = database.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setDate(1, new java.sql.Date(startingDate.getTime()));
+      preparedStatement.setDate(2, new java.sql.Date(endingDate.getTime()));
+
+      try (ResultSet resultSet = preparedStatement.executeQuery()) {
+        while (resultSet.next()) {
+          Date date = resultSet.getDate("date");
+          String userId = resultSet.getString("user_id");
+          boolean starting = resultSet.getBoolean("starting");
+          String type = resultSet.getString("type");
+          String name = resultSet.getString("name");
+          String state = resultSet.getString("state");
+          String details = resultSet.getString("details");
+          String largeImageText = resultSet.getString("large_image_text");
+          String smallImageText = resultSet.getString("small_image_text");
+
+          presences.add(new LoggablePresence(
+              date,
+              userId,
+              starting,
+              type,
+              name,
+              state,
+              details,
+              largeImageText,
+              smallImageText));
+        }
+      }
+    } catch (SQLException e) {
+      LOGGER.error("Failed to fetch presences. ", e);
+    }
+    return presences;
+  }
 }

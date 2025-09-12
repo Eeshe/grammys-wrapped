@@ -1,10 +1,13 @@
 package me.eeshe.grammyswrapped.model;
 
+import java.util.Date;
+
 import net.dv8tion.jda.api.entities.RichPresence;
 import net.dv8tion.jda.api.entities.RichPresence.Image;
 import net.dv8tion.jda.api.entities.User;
 
 public record LoggablePresence(
+    Date date,
     String userId,
     boolean starting,
     String type,
@@ -19,6 +22,7 @@ public record LoggablePresence(
       boolean starting,
       RichPresence richPresence) {
     return new LoggablePresence(
+        new Date(),
         user.getId(),
         starting,
         richPresence.getType() != null ? richPresence.getType().name() : null,
