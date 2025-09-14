@@ -51,10 +51,11 @@ public class Bot extends ListenerAdapter {
             GatewayIntent.MESSAGE_CONTENT))
         .addEventListeners(this)
         .addEventListeners(new StatsListener(statsService))
-        .addEventListeners(new CommandListener(statsService))
         .enableCache(CacheFlag.ACTIVITY)
         .setMemberCachePolicy(MemberCachePolicy.ONLINE)
         .build();
+
+    bot.addEventListener(new CommandListener(bot, statsService));
 
     addCommands();
   }

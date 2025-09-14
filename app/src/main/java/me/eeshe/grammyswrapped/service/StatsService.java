@@ -19,7 +19,6 @@ import me.eeshe.grammyswrapped.model.LoggableVoiceChatEvent;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.RichPresence;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.Activity.ActivityType;
 
 public class StatsService {
   private static final Logger LOGGER = LoggerFactory.getLogger(StatsService.class);
