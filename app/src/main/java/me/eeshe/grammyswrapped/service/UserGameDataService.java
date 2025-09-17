@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.model.LoggablePresence;
+import me.eeshe.grammyswrapped.model.UserData;
 import me.eeshe.grammyswrapped.model.UserGameData;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.User;
@@ -48,6 +49,6 @@ public class UserGameDataService {
     }
     LOGGER.info("Finished computing {} UserGameData objects.", userGameDataMap.size());
 
-    return userGameDataMap;
+    return (Map<String, UserGameData>) UserData.sortByUsername(userGameDataMap);
   }
 }

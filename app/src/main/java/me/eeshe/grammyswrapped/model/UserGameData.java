@@ -8,15 +8,13 @@ import java.util.Map;
 
 import net.dv8tion.jda.api.entities.User;
 
-public class UserGameData {
-  private final String userId;
-  private final String username;
+public class UserGameData extends UserData {
   // Game Name, Time Played in Milliseconds
   private final Map<String, Long> playedGames;
 
   public UserGameData(User user) {
-    this.userId = user.getId();
-    this.username = user.getName();
+    super(user);
+
     this.playedGames = new HashMap<>();
   }
 
@@ -25,14 +23,6 @@ public class UserGameData {
     accumulatedPlayedTimeMillis += playedTimeMillis;
 
     playedGames.put(gameName, accumulatedPlayedTimeMillis);
-  }
-
-  public String getUserId() {
-    return userId;
-  }
-
-  public String getUsername() {
-    return username;
   }
 
   public Map<String, Long> getPlayedGames() {
@@ -49,5 +39,4 @@ public class UserGameData {
 
     return playedGames;
   }
-
 }

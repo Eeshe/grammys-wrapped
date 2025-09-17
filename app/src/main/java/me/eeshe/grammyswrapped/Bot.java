@@ -52,7 +52,7 @@ public class Bot extends ListenerAdapter {
         .addEventListeners(this)
         .addEventListeners(new StatsListener(statsService))
         .enableCache(CacheFlag.ACTIVITY)
-        .setMemberCachePolicy(MemberCachePolicy.ONLINE)
+        .setMemberCachePolicy(MemberCachePolicy.ALL)
         .build();
 
     bot.addEventListener(new CommandListener(bot, statsService));
