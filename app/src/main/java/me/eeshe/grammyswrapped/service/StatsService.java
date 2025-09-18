@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -185,6 +186,38 @@ public class StatsService {
     }
   }
 
+  public List<LoggableMessage> fetchMessages(Date startingDate, Date endingDate) {
+    LOGGER.info("Fetching message entries from {} to {}.", startingDate, endingDate);
+
+    List<LoggableMessage> messages = new ArrayList<>();
+    String sql = "SELECT * FROM " + MESSAGES_TABLE + " WHERE date BETWEEN ? AND ?";
+    try (Connection connection = database.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setDate(1, new java.sql.Date(startingDate.getTime()));
+      preparedStatement.setDate(2, new java.sql.Date(endingDate.getTime()));
+
+      try (ResultSet resultSet = preparedStatement.executeQuery()) {
+        while (resultSet.next()) {
+          String userId = resultSet.getString("user_id");
+          String channelId = resultSet.getString("channel_id");
+          String content = resultSet.getString("content");
+          List<String> attachmentUrls = Arrays.asList(
+              (String[]) resultSet.getArray("attachments").getArray());
+
+          messages.add(new LoggableMessage(
+              userId,
+              channelId,
+              content,
+              attachmentUrls));
+        }
+      }
+    } catch (SQLException e) {
+      LOGGER.error("Failed to fetch presences. ", e);
+    }
+    LOGGER.info("Fetched {} messages from {} to {}", messages.size(), startingDate, endingDate);
+    return messages;
+  }
+
   public List<LoggablePresence> fetchPresences(Date startingDate, Date endingDate) {
     LOGGER.info("Fetching presences entries from {} to {}.", startingDate, endingDate);
 
@@ -222,6 +255,7 @@ public class StatsService {
     } catch (SQLException e) {
       LOGGER.error("Failed to fetch presences. ", e);
     }
+    LOGGER.info("Fetched {} presences from {} to {}.", presences.size(), startingDate, endingDate);
     return presences;
   }
 }

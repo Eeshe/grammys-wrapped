@@ -1,4 +1,4 @@
-package me.eeshe.grammyswrapped.service;
+package me.eeshe.grammyswrapped.service.userdata;
 
 import java.util.HashMap;
 import java.util.List;
@@ -8,8 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.model.LoggablePresence;
-import me.eeshe.grammyswrapped.model.UserData;
-import me.eeshe.grammyswrapped.model.UserGameData;
+import me.eeshe.grammyswrapped.model.userdata.UserData;
+import me.eeshe.grammyswrapped.model.userdata.UserGameData;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.User;
 

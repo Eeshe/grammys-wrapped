@@ -1,4 +1,4 @@
-package me.eeshe.grammyswrapped.model;
+package me.eeshe.grammyswrapped.model.userdata;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;

@@ -13,16 +13,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.model.ListenedArtist;
+import me.eeshe.grammyswrapped.model.LoggableMessage;
 import me.eeshe.grammyswrapped.model.LoggablePresence;
-import me.eeshe.grammyswrapped.model.UserGameData;
-import me.eeshe.grammyswrapped.model.UserMusicData;
+import me.eeshe.grammyswrapped.model.userdata.UserGameData;
+import me.eeshe.grammyswrapped.model.userdata.UserMessageData;
+import me.eeshe.grammyswrapped.model.userdata.UserMusicData;
 import me.eeshe.grammyswrapped.service.StatsService;
-import me.eeshe.grammyswrapped.service.UserGameDataService;
-import me.eeshe.grammyswrapped.service.UserMusicDataService;
+import me.eeshe.grammyswrapped.service.userdata.UserGameDataService;
+import me.eeshe.grammyswrapped.service.userdata.UserMessageDataService;
+import me.eeshe.grammyswrapped.service.userdata.UserMusicDataService;
 import me.eeshe.grammyswrapped.util.EmbedUtil;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 public class WrappedCommand {
@@ -32,12 +36,14 @@ public class WrappedCommand {
   private final StatsService statsService;
   private final UserGameDataService userGameDataService;
   private final UserMusicDataService userMusicDataService;
+  private final UserMessageDataService userMessageDataService;
 
   public WrappedCommand(JDA bot, StatsService statsService) {
     this.bot = bot;
     this.statsService = statsService;
     this.userGameDataService = new UserGameDataService(bot);
     this.userMusicDataService = new UserMusicDataService(bot);
+    this.userMessageDataService = new UserMessageDataService(bot);
   }
 
   /**
@@ -64,10 +70,12 @@ public class WrappedCommand {
         simpleDateFormat.format(startingDate),
         simpleDateFormat.format(endingDate));
     List<LoggablePresence> loggedPresences = statsService.fetchPresences(startingDate, endingDate);
+    List<LoggableMessage> loggedMessages = statsService.fetchMessages(startingDate, endingDate);
 
     event.replyEmbeds(List.of(
         createPlayedGamesEmbed(title, loggedPresences),
-        createPlayedMusicEmbed(title, loggedPresences))).queue();
+        createPlayedMusicEmbed(title, loggedPresences),
+        createMessagesSentEmbed(title, loggedMessages))).queue();
   }
 
   private MessageEmbed createPlayedGamesEmbed(String title, List<LoggablePresence> loggedPresences) {
@@ -89,7 +97,7 @@ public class WrappedCommand {
   private MessageEmbed createPlayedMusicEmbed(String title, List<LoggablePresence> loggedPresences) {
     Map<String, UserMusicData> userMusicDataMap = userMusicDataService.computeUserMusicData(loggedPresences);
 
-    StringBuilder stringBuilder = new StringBuilder("## Listened Music").append("\n");
+    StringBuilder stringBuilder = new StringBuilder("# Listened Music").append("\n");
     for (UserMusicData userMusicData : userMusicDataMap.values()) {
       String username = userMusicData.getUser().getName();
       List<ListenedArtist> listenedArtists = userMusicData.getListenedArtistsList();
@@ -113,6 +121,33 @@ public class WrappedCommand {
     listenedArtists = listenedArtists.reversed();
 
     return listenedArtists.subList(0, amount);
+  }
+
+  private MessageEmbed createMessagesSentEmbed(String title, List<LoggableMessage> loggedMessages) {
+    Map<String, UserMessageData> userMessageDataMap = userMessageDataService.computeUserMusicData(loggedMessages);
+    StringBuilder stringBuilder = new StringBuilder("# Sent Messages").append("\n");
+
+    for (UserMessageData userMessageData : userMessageDataMap.values()) {
+      String username = userMessageData.getUser().getName();
+
+      stringBuilder.append("## ").append(username).append(" (").append(userMessageData.countOverallMessages())
+          .append(")\n");
+
+      for (String channelId : userMessageData.getMessagedChannelIds()) {
+        TextChannel textChannel = bot.getChannelById(TextChannel.class, channelId);
+        if (textChannel == null) {
+          LOGGER.error("Couldn't find text channel with ID '{}'", channelId);
+          continue;
+        }
+        String channelName = textChannel.getName();
+
+        stringBuilder.append("### ").append(channelName).append(" (")
+            .append(userMessageData.countOverallMessages(channelId)).append(")\n");
+        stringBuilder.append("- Messages: ").append(userMessageData.countSentMessages(channelId)).append("\n");
+        stringBuilder.append("- Attachments: ").append(userMessageData.countSentAttachments(channelId)).append("\n");
+      }
+    }
+    return EmbedUtil.createEmbed(Color.YELLOW, title, stringBuilder.toString()).build();
   }
 
   private Date parseDate(String dateString) {

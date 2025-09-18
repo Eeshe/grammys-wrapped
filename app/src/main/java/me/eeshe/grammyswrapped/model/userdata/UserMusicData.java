@@ -1,4 +1,4 @@
-package me.eeshe.grammyswrapped.model;
+package me.eeshe.grammyswrapped.model.userdata;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import me.eeshe.grammyswrapped.model.ListenedArtist;
 import net.dv8tion.jda.api.entities.User;
 
 public class UserMusicData extends UserData {
