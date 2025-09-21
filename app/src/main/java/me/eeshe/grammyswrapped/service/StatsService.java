@@ -212,10 +212,74 @@ public class StatsService {
         }
       }
     } catch (SQLException e) {
-      LOGGER.error("Failed to fetch presences. ", e);
+      LOGGER.error("Failed to fetch messages. ", e);
     }
     LOGGER.info("Fetched {} messages from {} to {}", messages.size(), startingDate, endingDate);
     return messages;
+  }
+
+  public List<LoggableVoiceChatConnection> fetchVoiceChatConnections(Date startingDate, Date endingDate) {
+    LOGGER.info("Fetching voice chat connection entries from {} to {}.", startingDate, endingDate);
+
+    List<LoggableVoiceChatConnection> voiceChatConnections = new ArrayList<>();
+    String sql = "SELECT * FROM " + VOICE_CHAT_CONNECTIONS_TABLE + " WHERE date BETWEEN ? AND ? " +
+        "ORDER BY date ASC";
+    try (Connection connection = database.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setDate(1, new java.sql.Date(startingDate.getTime()));
+      preparedStatement.setDate(2, new java.sql.Date(endingDate.getTime()));
+
+      try (ResultSet resultSet = preparedStatement.executeQuery()) {
+        while (resultSet.next()) {
+          Date date = resultSet.getTimestamp("date");
+          String userId = resultSet.getString("user_id");
+          boolean joined = resultSet.getBoolean("joined");
+
+          voiceChatConnections.add(new LoggableVoiceChatConnection(
+              date,
+              userId,
+              joined));
+        }
+      }
+    } catch (SQLException e) {
+      LOGGER.error("Failed to fetch voice chat connections. ", e);
+    }
+    LOGGER.info("Fetched {} voice chat connections from {} to {}", voiceChatConnections.size(), startingDate,
+        endingDate);
+    return voiceChatConnections;
+  }
+
+  public List<LoggableVoiceChatEvent> fetchVoiceChatEvents(Date startingDate, Date endingDate) {
+    LOGGER.info("Fetching voice chat event entries from {} to {}.", startingDate, endingDate);
+
+    List<LoggableVoiceChatEvent> voiceChatEvents = new ArrayList<>();
+    String sql = "SELECT * FROM " + VOICE_CHAT_EVENTS_TABLE + " WHERE date BETWEEN ? AND ? " +
+        "ORDER BY date ASC";
+    try (Connection connection = database.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setDate(1, new java.sql.Date(startingDate.getTime()));
+      preparedStatement.setDate(2, new java.sql.Date(endingDate.getTime()));
+
+      try (ResultSet resultSet = preparedStatement.executeQuery()) {
+        while (resultSet.next()) {
+          Date date = resultSet.getTimestamp("date");
+          String userId = resultSet.getString("user_id");
+          boolean muted = resultSet.getBoolean("muted");
+          boolean deafened = resultSet.getBoolean("deafened");
+
+          voiceChatEvents.add(new LoggableVoiceChatEvent(
+              date,
+              userId,
+              muted,
+              deafened));
+        }
+      }
+    } catch (SQLException e) {
+      LOGGER.error("Failed to fetch voice chat events. ", e);
+    }
+    LOGGER.info("Fetched {} voice chat events from {} to {}", voiceChatEvents.size(), startingDate,
+        endingDate);
+    return voiceChatEvents;
   }
 
   public List<LoggablePresence> fetchPresences(Date startingDate, Date endingDate) {

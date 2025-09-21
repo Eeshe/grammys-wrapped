@@ -58,10 +58,29 @@ public class StatsListener extends ListenerAdapter {
 
   @Override
   public void onGuildVoiceUpdate(GuildVoiceUpdateEvent event) {
+    if (!hasEsquizogangRole(event.getMember())) {
+      return;
+    }
     boolean joined = event.getChannelJoined() != null;
+    User user = event.getEntity().getUser();
+    GuildVoiceState voiceState = event.getVoiceState();
     statsService.logVoiceChatConnection(
-        event.getEntity().getUser(),
+        user,
         joined);
+    if (!joined) {
+      // Upon leaving, muted and deafened status are always false. Log this to
+      // avoid carrying muted/deafened time to the next VC connection
+      logVoiceChatEvent(
+          user,
+          voiceState);
+    }
+    if (!joined || (!voiceState.isSelfMuted() && !voiceState.isSelfDeafened())) {
+      return;
+    }
+    // Member joined while being muted/deafened, log the state
+    logVoiceChatEvent(
+        user,
+        voiceState);
   }
 
   @Override

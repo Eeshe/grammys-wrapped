@@ -3,7 +3,6 @@ package me.eeshe.grammyswrapped.commands;
 import java.awt.Color;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -15,15 +14,18 @@ import org.slf4j.LoggerFactory;
 import me.eeshe.grammyswrapped.model.ListenedArtist;
 import me.eeshe.grammyswrapped.model.LoggableMessage;
 import me.eeshe.grammyswrapped.model.LoggablePresence;
+import me.eeshe.grammyswrapped.model.LoggableVoiceChatConnection;
+import me.eeshe.grammyswrapped.model.LoggableVoiceChatEvent;
 import me.eeshe.grammyswrapped.model.userdata.UserGameData;
 import me.eeshe.grammyswrapped.model.userdata.UserMessageData;
 import me.eeshe.grammyswrapped.model.userdata.UserMusicData;
+import me.eeshe.grammyswrapped.model.userdata.UserVoiceChatData;
 import me.eeshe.grammyswrapped.service.StatsService;
 import me.eeshe.grammyswrapped.service.userdata.UserGameDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserMessageDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserMusicDataService;
+import me.eeshe.grammyswrapped.service.userdata.UserVoiceChatDataService;
 import me.eeshe.grammyswrapped.util.EmbedUtil;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -37,6 +39,7 @@ public class WrappedCommand {
   private final UserGameDataService userGameDataService;
   private final UserMusicDataService userMusicDataService;
   private final UserMessageDataService userMessageDataService;
+  private final UserVoiceChatDataService userVoiceChatDataService;
 
   public WrappedCommand(JDA bot, StatsService statsService) {
     this.bot = bot;
@@ -44,6 +47,7 @@ public class WrappedCommand {
     this.userGameDataService = new UserGameDataService(bot);
     this.userMusicDataService = new UserMusicDataService(bot);
     this.userMessageDataService = new UserMessageDataService(bot);
+    this.userVoiceChatDataService = new UserVoiceChatDataService(bot);
   }
 
   /**
@@ -71,11 +75,33 @@ public class WrappedCommand {
         simpleDateFormat.format(endingDate));
     List<LoggablePresence> loggedPresences = statsService.fetchPresences(startingDate, endingDate);
     List<LoggableMessage> loggedMessages = statsService.fetchMessages(startingDate, endingDate);
+    List<LoggableVoiceChatConnection> loggedVoiceChatConnections = statsService.fetchVoiceChatConnections(startingDate,
+        endingDate);
+    List<LoggableVoiceChatEvent> loggedVoiceChatEvents = statsService.fetchVoiceChatEvents(startingDate, endingDate);
 
     event.replyEmbeds(List.of(
-        createPlayedGamesEmbed(title, loggedPresences),
-        createPlayedMusicEmbed(title, loggedPresences),
-        createMessagesSentEmbed(title, loggedMessages))).queue();
+        createPlayedGamesEmbed(
+            title,
+            loggedPresences),
+        createPlayedMusicEmbed(
+            title,
+            loggedPresences),
+        createMessagesSentEmbed(
+            title,
+            loggedMessages),
+        createVoiceChatEmbed(
+            title,
+            loggedVoiceChatConnections,
+            loggedVoiceChatEvents)))
+        .queue();
+  }
+
+  private Date parseDate(String dateString) {
+    try {
+      return new SimpleDateFormat("yyyy-MM-dd").parse(dateString);
+    } catch (ParseException e) {
+      return null;
+    }
   }
 
   private MessageEmbed createPlayedGamesEmbed(String title, List<LoggablePresence> loggedPresences) {
@@ -91,7 +117,7 @@ public class WrappedCommand {
         stringBuilder.append("- ").append(playedGame).append("\n");
       }
     }
-    return createEmbed(Color.BLUE, title, stringBuilder.toString()).build();
+    return EmbedUtil.createEmbed(Color.BLUE, title, stringBuilder.toString()).build();
   }
 
   private MessageEmbed createPlayedMusicEmbed(String title, List<LoggablePresence> loggedPresences) {
@@ -150,29 +176,65 @@ public class WrappedCommand {
     return EmbedUtil.createEmbed(Color.YELLOW, title, stringBuilder.toString()).build();
   }
 
-  private Date parseDate(String dateString) {
-    try {
-      return new SimpleDateFormat("yyyy-MM-dd").parse(dateString);
-    } catch (ParseException e) {
-      return null;
+  private MessageEmbed createVoiceChatEmbed(
+      String title,
+      List<LoggableVoiceChatConnection> loggedVoiceChatConnections,
+      List<LoggableVoiceChatEvent> loggedVoiceChatEvents) {
+    Map<String, UserVoiceChatData> userVoiceChatDataMap = userVoiceChatDataService
+        .computeUserVoiceChatData(
+            loggedVoiceChatConnections,
+            loggedVoiceChatEvents);
+    StringBuilder stringBuilder = new StringBuilder("# Voice Chat Stats").append("\n");
+
+    for (UserVoiceChatData userVoiceChatData : userVoiceChatDataMap.values()) {
+      String username = userVoiceChatData.getUser().getName();
+
+      stringBuilder.append("## ").append(username).append("\n");
+      stringBuilder.append("- Joined Voice Chats: ").append(userVoiceChatData.getJoinedVoiceChats()).append("\n");
+      stringBuilder.append("- Total Voice Chat Time: ")
+          .append(formatMilliseconds(userVoiceChatData.getVoiceChatTimeMillis())).append("\n");
+      stringBuilder.append("- Total Muted Time: ")
+          .append(formatMilliseconds(userVoiceChatData.getMutedVoiceChatTimeMillis())).append("\n");
+      stringBuilder.append("- Total Deafened Time: ")
+          .append(formatMilliseconds(userVoiceChatData.getDeafenedVoiceChatTimeMillis())).append("\n");
     }
+    return EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString()).build();
   }
 
   /**
-   * Creates a basic EmbedBuilder with a title, description, and color.
-   * Sets a default timestamp to the current time.
+   * Converts a time in milliseconds into the format `XXhYYmZZs`.
    *
-   * @param color       The color of the embed.
-   * @param title       The title of the embed.
-   * @param description The main description text of the embed.
-   * @return An EmbedBuilder instance, ready for further customization.
+   * Generated by Gemini.
+   *
+   * @param milliseconds The time duration in milliseconds.
+   * @return A formatted string representing the duration.
    */
-  public static EmbedBuilder createEmbed(Color color, String title, String description) {
-    EmbedBuilder embedBuilder = new EmbedBuilder();
-    embedBuilder.setColor(color);
-    embedBuilder.setTitle(title);
-    embedBuilder.setDescription(description);
-    embedBuilder.setTimestamp(Instant.now()); // Good practice to include a timestamp by default
-    return embedBuilder;
+  public static String formatMilliseconds(long milliseconds) {
+    if (milliseconds < 0) {
+      return "";
+    }
+    long totalSeconds = milliseconds / 1000;
+
+    long hours = totalSeconds / 3600;
+    long minutes = (totalSeconds % 3600) / 60;
+    long seconds = totalSeconds % 60;
+
+    StringBuilder stringBuilder = new StringBuilder();
+
+    if (hours > 0) {
+      stringBuilder.append(hours).append("h");
+    }
+    if (minutes > 0) {
+      stringBuilder.append(minutes).append("m");
+    } else if (hours > 0 && seconds > 0) {
+      stringBuilder.append("0m");
+    }
+    if (seconds > 0) {
+      stringBuilder.append(seconds).append("s");
+    }
+    if (stringBuilder.length() == 0) {
+      return "0s";
+    }
+    return stringBuilder.toString();
   }
 }
