@@ -48,6 +48,7 @@ public class StatsService {
             "id BIGSERIAL PRIMARY KEY, " +
             "user_id VARCHAR(255) NOT NULL, " +
             "date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, " +
+            "message_Id VARCHAR(255) NOT NULL, " +
             "channel_id VARCHAR(255) NOT NULL, " +
             "content TEXT, " +
             "attachments TEXT[]" +
@@ -104,14 +105,15 @@ public class StatsService {
     LoggableMessage loggableMessage = LoggableMessage.fromMessage(message);
     LOGGER.info("Logging message: {}", loggableMessage);
 
-    String sql = "INSERT INTO " + MESSAGES_TABLE + " (user_id, channel_id, content, attachments)" +
-        "VALUES (?, ?, ?, ?)";
+    String sql = "INSERT INTO " + MESSAGES_TABLE + " (user_id, message_id, channel_id, content, attachments)" +
+        "VALUES (?, ?, ?, ?, ?)";
     try (Connection connection = database.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
       preparedStatement.setString(1, loggableMessage.userId());
-      preparedStatement.setString(2, loggableMessage.channelId());
-      preparedStatement.setString(3, loggableMessage.content());
-      preparedStatement.setArray(4, connection.createArrayOf("text", loggableMessage.attachmentUrls().toArray()));
+      preparedStatement.setString(2, loggableMessage.messageId());
+      preparedStatement.setString(3, loggableMessage.channelId());
+      preparedStatement.setString(4, loggableMessage.content());
+      preparedStatement.setArray(5, connection.createArrayOf("text", loggableMessage.attachmentUrls().toArray()));
 
       preparedStatement.executeUpdate();
       LOGGER.info("Message logged.");
@@ -199,6 +201,7 @@ public class StatsService {
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
         while (resultSet.next()) {
           String userId = resultSet.getString("user_id");
+          String messageId = resultSet.getString("message_id");
           String channelId = resultSet.getString("channel_id");
           String content = resultSet.getString("content");
           List<String> attachmentUrls = Arrays.asList(
@@ -206,6 +209,7 @@ public class StatsService {
 
           messages.add(new LoggableMessage(
               userId,
+              messageId,
               channelId,
               content,
               attachmentUrls));

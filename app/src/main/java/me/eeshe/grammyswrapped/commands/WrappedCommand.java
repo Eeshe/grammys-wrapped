@@ -146,7 +146,7 @@ public class WrappedCommand {
     listenedArtists.sort(Comparator.comparing(listenedArtist -> listenedArtist.getListenedSongs().size()));
     listenedArtists = listenedArtists.reversed();
 
-    return listenedArtists.subList(0, amount);
+    return listenedArtists.subList(0, Math.min(listenedArtists.size(), amount));
   }
 
   private MessageEmbed createMessagesSentEmbed(String title, List<LoggableMessage> loggedMessages) {

@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.Message.Attachment;
 
 public record LoggableMessage(
     String userId,
+    String messageId,
     String channelId,
     String content,
     List<String> attachmentUrls) {
@@ -14,6 +15,7 @@ public record LoggableMessage(
   public static LoggableMessage fromMessage(Message message) {
     return new LoggableMessage(
         message.getMember().getUser().getId(),
+        message.getId(),
         message.getChannelId(),
         message.getContentRaw(),
         message.getAttachments().stream().map(Attachment::getUrl).toList());
