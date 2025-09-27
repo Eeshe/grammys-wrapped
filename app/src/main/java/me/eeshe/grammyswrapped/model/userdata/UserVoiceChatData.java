@@ -1,11 +1,18 @@
 package me.eeshe.grammyswrapped.model.userdata;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.util.Date;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
+import me.eeshe.grammyswrapped.util.SessionTimeUtil;
 import net.dv8tion.jda.api.entities.User;
 
 public class UserVoiceChatData extends UserData {
+  private final Map<LocalDate, Duration> dailyVoiceChatTime;
+
   private int joinedVoiceChats;
   private long voiceChatTimeMillis;
   private long mutedVoiceChatTimeMillis;
@@ -14,6 +21,7 @@ public class UserVoiceChatData extends UserData {
   public UserVoiceChatData(User user) {
     super(user);
 
+    this.dailyVoiceChatTime = new TreeMap<>();
     this.joinedVoiceChats = 0;
     this.voiceChatTimeMillis = 0;
     this.mutedVoiceChatTimeMillis = 0;
@@ -34,6 +42,14 @@ public class UserVoiceChatData extends UserData {
 
   public void addVoiceChatTime(Date joinDate, Date leaveDate) {
     this.voiceChatTimeMillis += leaveDate.getTime() - joinDate.getTime();
+    SessionTimeUtil.computeDailyVoiceChatTime(
+        dailyVoiceChatTime,
+        joinDate,
+        leaveDate);
+  }
+
+  public Map<LocalDate, Duration> getDailyVoiceChatTime() {
+    return dailyVoiceChatTime;
   }
 
   public long getMutedVoiceChatTimeMillis() {

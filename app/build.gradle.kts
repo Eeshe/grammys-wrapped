@@ -29,6 +29,7 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.7")
     implementation("com.zaxxer:HikariCP:7.0.0")
     implementation("ch.qos.logback:logback-classic:1.5.18")
+    implementation("org.jfree:jfreechart:1.5.6")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

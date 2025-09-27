@@ -1,8 +1,12 @@
 package me.eeshe.grammyswrapped.commands;
 
 import java.awt.Color;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -20,16 +24,20 @@ import me.eeshe.grammyswrapped.model.userdata.UserGameData;
 import me.eeshe.grammyswrapped.model.userdata.UserMessageData;
 import me.eeshe.grammyswrapped.model.userdata.UserMusicData;
 import me.eeshe.grammyswrapped.model.userdata.UserVoiceChatData;
+import me.eeshe.grammyswrapped.service.ChartService;
 import me.eeshe.grammyswrapped.service.StatsService;
+import me.eeshe.grammyswrapped.service.VoiceChatData;
 import me.eeshe.grammyswrapped.service.userdata.UserGameDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserMessageDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserMusicDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserVoiceChatDataService;
 import me.eeshe.grammyswrapped.util.EmbedUtil;
+import me.eeshe.grammyswrapped.util.SessionTimeUtil;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.utils.FileUpload;
 
 public class WrappedCommand {
   private static final Logger LOGGER = LoggerFactory.getLogger(WrappedCommand.class);
@@ -40,6 +48,7 @@ public class WrappedCommand {
   private final UserMusicDataService userMusicDataService;
   private final UserMessageDataService userMessageDataService;
   private final UserVoiceChatDataService userVoiceChatDataService;
+  private final ChartService chartService;
 
   public WrappedCommand(JDA bot, StatsService statsService) {
     this.bot = bot;
@@ -48,6 +57,7 @@ public class WrappedCommand {
     this.userMusicDataService = new UserMusicDataService(bot);
     this.userMessageDataService = new UserMessageDataService(bot);
     this.userVoiceChatDataService = new UserVoiceChatDataService(bot);
+    this.chartService = new ChartService();
   }
 
   /**
@@ -69,6 +79,8 @@ public class WrappedCommand {
       event.getHook().editOriginalFormat("Final date must be AFTER initial date.").queue();
       return;
     }
+    event.reply("Processing stats...").queue();
+
     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
     String title = String.format("Grammys Wrapped %s → %s\n",
         simpleDateFormat.format(startingDate),
@@ -79,21 +91,39 @@ public class WrappedCommand {
         endingDate);
     List<LoggableVoiceChatEvent> loggedVoiceChatEvents = statsService.fetchVoiceChatEvents(startingDate, endingDate);
 
-    event.replyEmbeds(List.of(
-        createPlayedGamesEmbed(
-            title,
-            loggedPresences),
-        createPlayedMusicEmbed(
-            title,
-            loggedPresences),
-        createMessagesSentEmbed(
-            title,
-            loggedMessages),
-        createVoiceChatEmbed(
-            title,
-            loggedVoiceChatConnections,
-            loggedVoiceChatEvents)))
-        .queue();
+    List<FileUpload> fileUploads = new ArrayList<>();
+    try {
+      Files.list(Paths.get("."))
+          .filter(Files::isRegularFile)
+          .filter(path -> path.getFileName().endsWith(".png"))
+          .forEach(path -> {
+            fileUploads.add(FileUpload.fromData(path));
+          });
+    } catch (IOException e) {
+      LOGGER.error("Error uploading graph files. {}", e.getMessage());
+    }
+
+    TextChannel responseChannel = (TextChannel) event.getChannel();
+
+    sendPlayedGamesEmbed(
+        responseChannel,
+        title,
+        loggedPresences);
+    sendPlayedMusicEmbed(
+        responseChannel,
+        title,
+        loggedPresences);
+    sendMessagesSentEmbed(
+        responseChannel,
+        title,
+        loggedMessages);
+    sendVoiceChatEmbeds(
+        responseChannel,
+        title,
+        startingDate,
+        endingDate,
+        loggedVoiceChatConnections,
+        loggedVoiceChatEvents);
   }
 
   private Date parseDate(String dateString) {
@@ -104,7 +134,10 @@ public class WrappedCommand {
     }
   }
 
-  private MessageEmbed createPlayedGamesEmbed(String title, List<LoggablePresence> loggedPresences) {
+  private void sendPlayedGamesEmbed(
+      TextChannel textChannel,
+      String title,
+      List<LoggablePresence> loggedPresences) {
     Map<String, UserGameData> userGameDataMap = userGameDataService.computeUserGameData(loggedPresences);
 
     StringBuilder stringBuilder = new StringBuilder("# Played Games").append("\n");
@@ -117,10 +150,13 @@ public class WrappedCommand {
         stringBuilder.append("- ").append(playedGame).append("\n");
       }
     }
-    return EmbedUtil.createEmbed(Color.BLUE, title, stringBuilder.toString()).build();
+    textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.BLUE, title, stringBuilder.toString()).build()).queue();
   }
 
-  private MessageEmbed createPlayedMusicEmbed(String title, List<LoggablePresence> loggedPresences) {
+  private void sendPlayedMusicEmbed(
+      TextChannel textChannel,
+      String title,
+      List<LoggablePresence> loggedPresences) {
     Map<String, UserMusicData> userMusicDataMap = userMusicDataService.computeUserMusicData(loggedPresences);
 
     StringBuilder stringBuilder = new StringBuilder("# Listened Music").append("\n");
@@ -139,7 +175,8 @@ public class WrappedCommand {
             .append(String.valueOf(listenedArtist.getListenedSongs().size())).append(")\n");
       }
     }
-    return EmbedUtil.createEmbed(Color.GREEN, title, stringBuilder.toString()).build();
+    textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.GREEN, title, stringBuilder.toString()).build()).queue();
+    ;
   }
 
   private List<ListenedArtist> selectTopArtists(List<ListenedArtist> listenedArtists, int amount) {
@@ -149,7 +186,10 @@ public class WrappedCommand {
     return listenedArtists.subList(0, Math.min(listenedArtists.size(), amount));
   }
 
-  private MessageEmbed createMessagesSentEmbed(String title, List<LoggableMessage> loggedMessages) {
+  private void sendMessagesSentEmbed(
+      TextChannel textChannel,
+      String title,
+      List<LoggableMessage> loggedMessages) {
     Map<String, UserMessageData> userMessageDataMap = userMessageDataService.computeUserMusicData(loggedMessages);
     StringBuilder stringBuilder = new StringBuilder("# Sent Messages").append("\n");
 
@@ -160,31 +200,44 @@ public class WrappedCommand {
           .append(")\n");
 
       for (String channelId : userMessageData.getMessagedChannelIds()) {
-        TextChannel textChannel = bot.getChannelById(TextChannel.class, channelId);
-        if (textChannel == null) {
+        TextChannel messageChannel = bot.getChannelById(TextChannel.class, channelId);
+        if (messageChannel == null) {
           LOGGER.error("Couldn't find text channel with ID '{}'", channelId);
           continue;
         }
-        String channelName = textChannel.getName();
+        String messageChannelName = messageChannel.getName();
 
-        stringBuilder.append("### ").append(channelName).append(" (")
+        stringBuilder.append("### ").append(messageChannelName).append(" (")
             .append(userMessageData.countOverallMessages(channelId)).append(")\n");
         stringBuilder.append("- Messages: ").append(userMessageData.countSentMessages(channelId)).append("\n");
         stringBuilder.append("- Attachments: ").append(userMessageData.countSentAttachments(channelId)).append("\n");
       }
     }
-    return EmbedUtil.createEmbed(Color.YELLOW, title, stringBuilder.toString()).build();
+    textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.YELLOW, title, stringBuilder.toString()).build()).queue();
+    ;
   }
 
-  private MessageEmbed createVoiceChatEmbed(
+  private void sendVoiceChatEmbeds(
+      TextChannel textChannel,
       String title,
+      Date startingDate,
+      Date endingDate,
       List<LoggableVoiceChatConnection> loggedVoiceChatConnections,
       List<LoggableVoiceChatEvent> loggedVoiceChatEvents) {
-    Map<String, UserVoiceChatData> userVoiceChatDataMap = userVoiceChatDataService
+    VoiceChatData voiceChatData = userVoiceChatDataService
         .computeUserVoiceChatData(
             loggedVoiceChatConnections,
             loggedVoiceChatEvents);
+    Map<String, UserVoiceChatData> userVoiceChatDataMap = voiceChatData.getUserVoiceChatData();
     StringBuilder stringBuilder = new StringBuilder("# Voice Chat Stats").append("\n");
+
+    List<FileUpload> fileUploads = new ArrayList<>();
+
+    chartService.generateGeneralVoiceChatTimeChart(
+        new ArrayList<>(userVoiceChatDataMap.values()),
+        startingDate,
+        endingDate);
+    fileUploads.add(FileUpload.fromData(Paths.get("overall.png")));
 
     for (UserVoiceChatData userVoiceChatData : userVoiceChatDataMap.values()) {
       String username = userVoiceChatData.getUser().getName();
@@ -192,49 +245,23 @@ public class WrappedCommand {
       stringBuilder.append("## ").append(username).append("\n");
       stringBuilder.append("- Joined Voice Chats: ").append(userVoiceChatData.getJoinedVoiceChats()).append("\n");
       stringBuilder.append("- Total Voice Chat Time: ")
-          .append(formatMilliseconds(userVoiceChatData.getVoiceChatTimeMillis())).append("\n");
+          .append(SessionTimeUtil.formatMilliseconds(userVoiceChatData.getVoiceChatTimeMillis())).append("\n");
       stringBuilder.append("- Total Muted Time: ")
-          .append(formatMilliseconds(userVoiceChatData.getMutedVoiceChatTimeMillis())).append("\n");
+          .append(SessionTimeUtil.formatMilliseconds(userVoiceChatData.getMutedVoiceChatTimeMillis())).append("\n");
       stringBuilder.append("- Total Deafened Time: ")
-          .append(formatMilliseconds(userVoiceChatData.getDeafenedVoiceChatTimeMillis())).append("\n");
+          .append(SessionTimeUtil.formatMilliseconds(userVoiceChatData.getDeafenedVoiceChatTimeMillis())).append("\n");
+
+      chartService.generateUserVcTimeChart(
+          userVoiceChatData,
+          startingDate,
+          endingDate);
+      fileUploads.add(FileUpload.fromData(Paths.get(username + ".png")));
     }
-    return EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString()).build();
+    MessageEmbed mainEmbed = EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString())
+        .setFooter("Charts with this data are being sent...").build();
+
+    textChannel.sendMessageEmbeds(mainEmbed).queue();
+    textChannel.sendFiles(fileUploads).queue();
   }
 
-  /**
-   * Converts a time in milliseconds into the format `XXhYYmZZs`.
-   *
-   * Generated by Gemini.
-   *
-   * @param milliseconds The time duration in milliseconds.
-   * @return A formatted string representing the duration.
-   */
-  public static String formatMilliseconds(long milliseconds) {
-    if (milliseconds < 0) {
-      return "";
-    }
-    long totalSeconds = milliseconds / 1000;
-
-    long hours = totalSeconds / 3600;
-    long minutes = (totalSeconds % 3600) / 60;
-    long seconds = totalSeconds % 60;
-
-    StringBuilder stringBuilder = new StringBuilder();
-
-    if (hours > 0) {
-      stringBuilder.append(hours).append("h");
-    }
-    if (minutes > 0) {
-      stringBuilder.append(minutes).append("m");
-    } else if (hours > 0 && seconds > 0) {
-      stringBuilder.append("0m");
-    }
-    if (seconds > 0) {
-      stringBuilder.append(seconds).append("s");
-    }
-    if (stringBuilder.length() == 0) {
-      return "0s";
-    }
-    return stringBuilder.toString();
-  }
 }

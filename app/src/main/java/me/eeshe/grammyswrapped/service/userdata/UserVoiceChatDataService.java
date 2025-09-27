@@ -11,6 +11,7 @@ import me.eeshe.grammyswrapped.model.LoggableVoiceChatConnection;
 import me.eeshe.grammyswrapped.model.LoggableVoiceChatEvent;
 import me.eeshe.grammyswrapped.model.userdata.UserData;
 import me.eeshe.grammyswrapped.model.userdata.UserVoiceChatData;
+import me.eeshe.grammyswrapped.service.VoiceChatData;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.User;
 
@@ -30,30 +31,36 @@ public class UserVoiceChatDataService {
    * @param loggableVoiceChatEvents      VoiceChatEvents to compute.
    * @return Computed UserVoiceChatData.
    */
-  public Map<String, UserVoiceChatData> computeUserVoiceChatData(
+  public VoiceChatData computeUserVoiceChatData(
       List<LoggableVoiceChatConnection> loggableVoiceChatConnections,
       List<LoggableVoiceChatEvent> loggableVoiceChatEvents) {
     LOGGER.info("Computing UserVoiceChatData from {} entries...",
         loggableVoiceChatConnections.size() + loggableVoiceChatEvents.size());
-    Map<String, UserVoiceChatData> userVoiceChatDataMap = new HashMap<>();
+    VoiceChatData voiceChatData = new VoiceChatData();
 
-    computeVoiceChatConnections(userVoiceChatDataMap, loggableVoiceChatConnections);
-    computeVoiceChatEvents(userVoiceChatDataMap, loggableVoiceChatEvents);
+    computeVoiceChatConnections(voiceChatData, loggableVoiceChatConnections);
+    computeVoiceChatEvents(voiceChatData.getUserVoiceChatData(), loggableVoiceChatEvents);
 
-    return (Map<String, UserVoiceChatData>) UserData.sortByUsername(userVoiceChatDataMap);
+    return new VoiceChatData(
+        (Map<String, UserVoiceChatData>) UserData.sortByUsername(voiceChatData.getUserVoiceChatData()),
+        voiceChatData.getOverallDailyVoiceChatTime());
   }
 
   /**
    * Computes the passed VoiceChatConnections and adds them to the passed
    * UserVoiceChatData Map.
    *
-   * @param userVoiceChatDataMap         UserVoiceChatData Map to modify.
+   * @param voiceChatData                VoiceChatData to modify.
    * @param loggableVoiceChatConnections VoiceChatConnections to compute.
    */
   private void computeVoiceChatConnections(
-      Map<String, UserVoiceChatData> userVoiceChatDataMap,
+      VoiceChatData voiceChatData,
       List<LoggableVoiceChatConnection> loggableVoiceChatConnections) {
+    Map<String, UserVoiceChatData> userVoiceChatDataMap = voiceChatData.getUserVoiceChatData();
     Map<String, LoggableVoiceChatConnection> previousVoiceChatConnections = new HashMap<>();
+    // TODO: Current months' data is corrupted, implement on October
+    // int currentVoiceChatSessionMembers = 0;
+    // Date currentVoiceChatSessionStartDate = null;
     for (LoggableVoiceChatConnection voiceChatConnection : loggableVoiceChatConnections) {
       String userId = voiceChatConnection.userId();
       User user = bot.getUserById(userId);
@@ -66,6 +73,14 @@ public class UserVoiceChatDataService {
       UserVoiceChatData userVoiceChatData = userVoiceChatDataMap.getOrDefault(userId, new UserVoiceChatData(user));
       if (joined) {
         userVoiceChatData.increaseJoinedVoiceChats();
+
+        // TODO: Current months' data is corrupted, implement on October
+        // if (currentVoiceChatSessionMembers <= 0) {
+        // currentVoiceChatSessionStartDate = voiceChatConnection.date();
+        // }
+        // currentVoiceChatSessionMembers += 1;
+        // LOGGER.info("{} joined at {}", user.getName(), voiceChatConnection.date());
+        // LOGGER.info("Voice Chat Members: {}", currentVoiceChatSessionMembers);
       } else {
         LoggableVoiceChatConnection previousVoiceChatConnection = previousVoiceChatConnections.remove(userId);
         if (previousVoiceChatConnection != null && previousVoiceChatConnection.joined()) {
@@ -74,6 +89,18 @@ public class UserVoiceChatDataService {
           userVoiceChatData.addVoiceChatTime(
               previousVoiceChatConnection.date(),
               voiceChatConnection.date());
+
+          // TODO: Current months' data is corrupted, implement on October
+          // currentVoiceChatSessionMembers -= 1;
+          // LOGGER.info("{} left at {}", user.getName(), voiceChatConnection.date());
+          // LOGGER.info("Voice Chat Members: {}", currentVoiceChatSessionMembers);
+          // if (currentVoiceChatSessionMembers <= 0) {
+          // Date currentVoiceChatSessionEndDate = voiceChatConnection.date();
+          // SessionTimeUtil.computeDailyVoiceChatTime(
+          // voiceChatData.getOverallDailyVoiceChatTime(),
+          // currentVoiceChatSessionStartDate,
+          // currentVoiceChatSessionEndDate);
+          // }
         }
       }
       userVoiceChatDataMap.put(userId, userVoiceChatData);
