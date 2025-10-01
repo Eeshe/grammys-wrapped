@@ -23,6 +23,10 @@ public class AppConfig {
     }
   }
 
+  public String getLanguageCode() {
+    return properties.getProperty("language", "");
+  }
+
   public String getBotToken() {
     return properties.getProperty("discord.bot.token");
   }

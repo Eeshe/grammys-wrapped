@@ -45,8 +45,8 @@ public class StatsListener extends ListenerAdapter {
     if (!hasEsquizogangRole(member)) {
       return;
     }
-    Activity newActivity = event.getOldActivity();
-    RichPresence richPresence = newActivity.asRichPresence();
+    Activity oldActivity = event.getOldActivity();
+    RichPresence richPresence = oldActivity.asRichPresence();
     if (richPresence == null) {
       return;
     }

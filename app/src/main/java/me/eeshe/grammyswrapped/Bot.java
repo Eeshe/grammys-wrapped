@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.listeners.CommandListener;
 import me.eeshe.grammyswrapped.listeners.StatsListener;
+import me.eeshe.grammyswrapped.model.LocalizedMessage;
+import me.eeshe.grammyswrapped.service.LocalizationService;
 import me.eeshe.grammyswrapped.service.StatsService;
 import me.eeshe.grammyswrapped.util.AppConfig;
 import net.dv8tion.jda.api.JDA;
@@ -34,9 +36,11 @@ public class Bot extends ListenerAdapter {
 
   public void start() {
     AppConfig botConfig = new AppConfig();
+    LocalizationService.initialize(botConfig.getLanguageCode());
+
     String botToken = botConfig.getBotToken();
     if (botToken == null) {
-      LOGGER.error("Bot token not provided.");
+      LOGGER.error(LocalizedMessage.BOT_TOKEN_NOT_CONFIGURED.get());
       return;
     }
     statsService.createStatsTables();

@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.model.ListenedArtist;
+import me.eeshe.grammyswrapped.model.LocalizedMessage;
 import me.eeshe.grammyswrapped.model.LoggableMessage;
 import me.eeshe.grammyswrapped.model.LoggablePresence;
 import me.eeshe.grammyswrapped.model.LoggableVoiceChatConnection;
@@ -82,7 +83,7 @@ public class WrappedCommand {
     event.reply("Processing stats...").queue();
 
     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-    String title = String.format("Grammys Wrapped %s → %s\n",
+    String title = LocalizedMessage.GRAMMYS_WRAPPED_TITLE.getFormatted(
         simpleDateFormat.format(startingDate),
         simpleDateFormat.format(endingDate));
     List<LoggablePresence> loggedPresences = statsService.fetchPresences(startingDate, endingDate);
@@ -140,7 +141,8 @@ public class WrappedCommand {
       List<LoggablePresence> loggedPresences) {
     Map<String, UserGameData> userGameDataMap = userGameDataService.computeUserGameData(loggedPresences);
 
-    StringBuilder stringBuilder = new StringBuilder("# Played Games").append("\n");
+    StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_PLAYED_GAMES_TITLE.get())
+        .append("\n");
     for (UserGameData userGameData : userGameDataMap.values()) {
       String username = userGameData.getUser().getName();
       List<String> playedGames = userGameData.getPlayedGameList();
@@ -159,7 +161,8 @@ public class WrappedCommand {
       List<LoggablePresence> loggedPresences) {
     Map<String, UserMusicData> userMusicDataMap = userMusicDataService.computeUserMusicData(loggedPresences);
 
-    StringBuilder stringBuilder = new StringBuilder("# Listened Music").append("\n");
+    StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_LISTENED_MUSIC_TITLE.get())
+        .append("\n");
     for (UserMusicData userMusicData : userMusicDataMap.values()) {
       String username = userMusicData.getUser().getName();
       List<ListenedArtist> listenedArtists = userMusicData.getListenedArtistsList();
@@ -191,7 +194,8 @@ public class WrappedCommand {
       String title,
       List<LoggableMessage> loggedMessages) {
     Map<String, UserMessageData> userMessageDataMap = userMessageDataService.computeUserMusicData(loggedMessages);
-    StringBuilder stringBuilder = new StringBuilder("# Sent Messages").append("\n");
+    StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_TITLE.get())
+        .append("\n");
 
     for (UserMessageData userMessageData : userMessageDataMap.values()) {
       String username = userMessageData.getUser().getName();
@@ -209,12 +213,13 @@ public class WrappedCommand {
 
         stringBuilder.append("### ").append(messageChannelName).append(" (")
             .append(userMessageData.countOverallMessages(channelId)).append(")\n");
-        stringBuilder.append("- Messages: ").append(userMessageData.countSentMessages(channelId)).append("\n");
-        stringBuilder.append("- Attachments: ").append(userMessageData.countSentAttachments(channelId)).append("\n");
+        stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_MESSAGES_LABEL.getFormatted(
+            userMessageData.countSentMessages(channelId))).append("\n");
+        stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_ATTACHMENTS_LABEL.getFormatted(
+            userMessageData.countSentMessages(channelId))).append("\n");
       }
     }
     textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.YELLOW, title, stringBuilder.toString()).build()).queue();
-    ;
   }
 
   private void sendVoiceChatEmbeds(
@@ -229,7 +234,8 @@ public class WrappedCommand {
             loggedVoiceChatConnections,
             loggedVoiceChatEvents);
     Map<String, UserVoiceChatData> userVoiceChatDataMap = voiceChatData.getUserVoiceChatData();
-    StringBuilder stringBuilder = new StringBuilder("# Voice Chat Stats").append("\n");
+    StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TITLE.get())
+        .append("\n");
 
     List<FileUpload> fileUploads = new ArrayList<>();
 
@@ -243,13 +249,14 @@ public class WrappedCommand {
       String username = userVoiceChatData.getUser().getName();
 
       stringBuilder.append("## ").append(username).append("\n");
-      stringBuilder.append("- Joined Voice Chats: ").append(userVoiceChatData.getJoinedVoiceChats()).append("\n");
-      stringBuilder.append("- Total Voice Chat Time: ")
-          .append(SessionTimeUtil.formatMilliseconds(userVoiceChatData.getVoiceChatTimeMillis())).append("\n");
-      stringBuilder.append("- Total Muted Time: ")
-          .append(SessionTimeUtil.formatMilliseconds(userVoiceChatData.getMutedVoiceChatTimeMillis())).append("\n");
-      stringBuilder.append("- Total Deafened Time: ")
-          .append(SessionTimeUtil.formatMilliseconds(userVoiceChatData.getDeafenedVoiceChatTimeMillis())).append("\n");
+      stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_JOINED_VCS_LABEL.getFormatted(
+          userVoiceChatData.getJoinedVoiceChats())).append("\n");
+      stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_VC_TIME_LABEL.getFormatted(
+          SessionTimeUtil.formatMilliseconds(userVoiceChatData.getVoiceChatTimeMillis()))).append("\n");
+      stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_MUTED_TIME_LABEL.getFormatted(
+          SessionTimeUtil.formatMilliseconds(userVoiceChatData.getMutedVoiceChatTimeMillis()))).append("\n");
+      stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_DEAFENED_TIME_LABEL.getFormatted(
+          SessionTimeUtil.formatMilliseconds(userVoiceChatData.getDeafenedVoiceChatTimeMillis()))).append("\n");
 
       chartService.generateUserVcTimeChart(
           userVoiceChatData,
@@ -258,7 +265,7 @@ public class WrappedCommand {
       fileUploads.add(FileUpload.fromData(Paths.get(username + ".png")));
     }
     MessageEmbed mainEmbed = EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString())
-        .setFooter("Charts with this data are being sent...").build();
+        .setFooter(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHARTS_SENDING.get()).build();
 
     textChannel.sendMessageEmbeds(mainEmbed).queue();
     textChannel.sendFiles(fileUploads).queue();

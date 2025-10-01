@@ -1,3 +1,4 @@
+language = EN
 discord.bot.token = DISCORD_TOKEN
 test-guild.id = TEST_GUILD_ID
 postgresql.host = POSTGRESQL_HOST

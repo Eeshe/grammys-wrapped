@@ -38,6 +38,7 @@ import org.jfree.data.time.TimeSeriesCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import me.eeshe.grammyswrapped.model.LocalizedMessage;
 import me.eeshe.grammyswrapped.model.userdata.UserVoiceChatData;
 import me.eeshe.grammyswrapped.util.SessionTimeUtil;
 
@@ -52,7 +53,8 @@ public class ChartService {
       new Color(255, 105, 120),
       new Color(255, 22, 84),
       new Color(204, 146, 194),
-      new Color(83, 255, 69));
+      new Color(83, 255, 69),
+      new Color(31, 1, 185));
 
   /**
    * Generates a time series chart for daily voice chat times and saves it as a
@@ -100,9 +102,9 @@ public class ChartService {
 
     // Create the JFreeChart object
     String username = userVoiceChatData.getUser().getName();
-    String chartTitle = String.format("%s's VC Time", username);
-    String xLabel = "Date";
-    String yLabel = "Time Spent (hours)";
+    String chartTitle = LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHART_USER_TITLE.getFormatted(username);
+    String xLabel = LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHART_X_AXIS.get();
+    String yLabel = LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHART_Y_AXIS.get();
     boolean showLegend = false;
     boolean useTooltips = false;
     boolean generateUrls = false;
@@ -200,9 +202,9 @@ public class ChartService {
     }
 
     // 2. Create the JFreeChart object
-    String chartTitle = "Overall Voice Chat Time";
-    String xLabel = "Date";
-    String yLabel = "Time Spent (hours)";
+    String chartTitle = LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHART_OVERALL_TITLE.get();
+    String xLabel = LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHART_X_AXIS.get();
+    String yLabel = LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHART_Y_AXIS.get();
     boolean showLegend = false;
     boolean useTooltips = false;
     boolean generateUrls = false;
@@ -331,7 +333,6 @@ public class ChartService {
 
     // Y-axis (NumberAxis) styling
     NumberAxis hoursAxis = (NumberAxis) plot.getRangeAxis();
-    hoursAxis.setLabel("Time spent (hours)");
     hoursAxis.setStandardTickUnits(NumberAxis.createStandardTickUnits());
     hoursAxis.setNumberFormatOverride(new DecimalFormat("0.00"));
     hoursAxis.setRange(new Range(0.0, 12.0));

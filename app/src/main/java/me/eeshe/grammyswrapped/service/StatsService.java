@@ -48,7 +48,7 @@ public class StatsService {
             "id BIGSERIAL PRIMARY KEY, " +
             "user_id VARCHAR(255) NOT NULL, " +
             "date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, " +
-            "message_Id VARCHAR(255) NOT NULL, " +
+            "message_id VARCHAR(255) NOT NULL, " +
             "channel_id VARCHAR(255) NOT NULL, " +
             "content TEXT, " +
             "attachments TEXT[]" +
