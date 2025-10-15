@@ -216,7 +216,7 @@ public class WrappedCommand {
         stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_MESSAGES_LABEL.getFormatted(
             userMessageData.countSentMessages(channelId))).append("\n");
         stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_ATTACHMENTS_LABEL.getFormatted(
-            userMessageData.countSentMessages(channelId))).append("\n");
+            userMessageData.countSentAttachments(channelId))).append("\n");
       }
     }
     textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.YELLOW, title, stringBuilder.toString()).build()).queue();
