@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,11 +146,16 @@ public class WrappedCommand {
         .append("\n");
     for (UserGameData userGameData : userGameDataMap.values()) {
       String username = userGameData.getUser().getName();
-      List<String> playedGames = userGameData.getPlayedGameList();
 
       stringBuilder.append("### ").append(username).append("\n");
-      for (String playedGame : playedGames) {
-        stringBuilder.append("- ").append(playedGame).append("\n");
+      for (Entry<String, Long> entry : userGameData.getPlayedGames().entrySet()) {
+        String gameName = entry.getKey();
+        String formattedTime = SessionTimeUtil.formatMilliseconds(entry.getValue());
+        String playedGameLine = String.format("- %s (%s)\n",
+            gameName,
+            gameName.equals("Megabonk") ? "🖕" : formattedTime);
+
+        stringBuilder.append(playedGameLine);
       }
     }
     textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.BLUE, title, stringBuilder.toString()).build()).queue();

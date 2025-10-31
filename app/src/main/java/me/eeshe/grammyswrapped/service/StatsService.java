@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -290,7 +291,8 @@ public class StatsService {
     LOGGER.info("Fetching presences entries from {} to {}.", startingDate, endingDate);
 
     List<LoggablePresence> presences = new ArrayList<>();
-    String sql = "SELECT * FROM " + PRESENCES_TABLE + " WHERE date BETWEEN ? AND ?";
+    String sql = "SELECT * FROM " + PRESENCES_TABLE + " WHERE date BETWEEN ? AND ? " +
+        "ORDER BY date ASC";
     try (Connection connection = database.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
       preparedStatement.setDate(1, new java.sql.Date(startingDate.getTime()));
@@ -298,7 +300,7 @@ public class StatsService {
 
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
         while (resultSet.next()) {
-          Date date = resultSet.getDate("date");
+          OffsetDateTime dateTime = resultSet.getObject("date", OffsetDateTime.class);
           String userId = resultSet.getString("user_id");
           boolean starting = resultSet.getBoolean("starting");
           String type = resultSet.getString("type");
@@ -309,7 +311,7 @@ public class StatsService {
           String smallImageText = resultSet.getString("small_image_text");
 
           presences.add(new LoggablePresence(
-              date,
+              dateTime,
               userId,
               starting,
               type,

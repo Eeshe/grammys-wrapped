@@ -2,7 +2,7 @@ package me.eeshe.grammyswrapped.model.userdata;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +15,7 @@ public class UserGameData extends UserData {
   public UserGameData(User user) {
     super(user);
 
-    this.playedGames = new HashMap<>();
+    this.playedGames = new LinkedHashMap<>();
   }
 
   public void addPlayedGame(String gameName, long playedTimeMillis) {
