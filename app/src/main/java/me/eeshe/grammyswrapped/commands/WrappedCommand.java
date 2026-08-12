@@ -34,7 +34,7 @@ import me.eeshe.grammyswrapped.service.userdata.UserMessageDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserMusicDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserVoiceChatDataService;
 import me.eeshe.grammyswrapped.util.EmbedUtil;
-import me.eeshe.grammyswrapped.util.SessionTimeUtil;
+import me.eeshe.grammyswrapped.util.TimeUtil;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -42,239 +42,244 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.utils.FileUpload;
 
 public class WrappedCommand {
-  private static final Logger LOGGER = LoggerFactory.getLogger(WrappedCommand.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WrappedCommand.class);
 
-  private final JDA bot;
-  private final StatsService statsService;
-  private final UserGameDataService userGameDataService;
-  private final UserMusicDataService userMusicDataService;
-  private final UserMessageDataService userMessageDataService;
-  private final UserVoiceChatDataService userVoiceChatDataService;
-  private final ChartService chartService;
+    private final JDA bot;
+    private final StatsService statsService;
+    private final UserGameDataService userGameDataService;
+    private final UserMusicDataService userMusicDataService;
+    private final UserMessageDataService userMessageDataService;
+    private final UserVoiceChatDataService userVoiceChatDataService;
+    private final ChartService chartService;
 
-  public WrappedCommand(JDA bot, StatsService statsService) {
-    this.bot = bot;
-    this.statsService = statsService;
-    this.userGameDataService = new UserGameDataService(bot);
-    this.userMusicDataService = new UserMusicDataService(bot);
-    this.userMessageDataService = new UserMessageDataService(bot);
-    this.userVoiceChatDataService = new UserVoiceChatDataService(bot);
-    this.chartService = new ChartService();
-  }
-
-  /**
-   * Handles the interaction with the /wrapped <StartingDate> <EndingDate>
-   * command.
-   *
-   * @param event SlashCommandInteractionEvent.
-   */
-  public void handle(SlashCommandInteractionEvent event) {
-    String startingDateString = event.getOption("starting-date").getAsString();
-    String endingDateString = event.getOption("ending-date").getAsString();
-    Date startingDate = parseDate(startingDateString);
-    Date endingDate = parseDate(endingDateString);
-    if (startingDate == null || endingDate == null) {
-      event.getHook().editOriginalFormat("Invalid date format. Please use: yyyy-MM-dd. Ex: 2001-9-11").queue();
-      return;
-    }
-    if (endingDate.before(startingDate)) {
-      event.getHook().editOriginalFormat("Final date must be AFTER initial date.").queue();
-      return;
-    }
-    event.reply("Processing stats...").queue();
-
-    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-    String title = LocalizedMessage.GRAMMYS_WRAPPED_TITLE.getFormatted(
-        simpleDateFormat.format(startingDate),
-        simpleDateFormat.format(endingDate));
-    List<LoggablePresence> loggedPresences = statsService.fetchPresences(startingDate, endingDate);
-    List<LoggableMessage> loggedMessages = statsService.fetchMessages(startingDate, endingDate);
-    List<LoggableVoiceChatConnection> loggedVoiceChatConnections = statsService.fetchVoiceChatConnections(startingDate,
-        endingDate);
-    List<LoggableVoiceChatEvent> loggedVoiceChatEvents = statsService.fetchVoiceChatEvents(startingDate, endingDate);
-
-    List<FileUpload> fileUploads = new ArrayList<>();
-    try {
-      Files.list(Paths.get("."))
-          .filter(Files::isRegularFile)
-          .filter(path -> path.getFileName().endsWith(".png"))
-          .forEach(path -> {
-            fileUploads.add(FileUpload.fromData(path));
-          });
-    } catch (IOException e) {
-      LOGGER.error("Error uploading graph files. {}", e.getMessage());
+    public WrappedCommand(JDA bot, StatsService statsService) {
+        this.bot = bot;
+        this.statsService = statsService;
+        this.userGameDataService = new UserGameDataService(bot);
+        this.userMusicDataService = new UserMusicDataService(bot);
+        this.userMessageDataService = new UserMessageDataService(bot);
+        this.userVoiceChatDataService = new UserVoiceChatDataService(bot);
+        this.chartService = new ChartService();
     }
 
-    TextChannel responseChannel = (TextChannel) event.getChannel();
-
-    sendPlayedGamesEmbed(
-        responseChannel,
-        title,
-        loggedPresences);
-    sendPlayedMusicEmbed(
-        responseChannel,
-        title,
-        loggedPresences);
-    sendMessagesSentEmbed(
-        responseChannel,
-        title,
-        loggedMessages);
-    sendVoiceChatEmbeds(
-        responseChannel,
-        title,
-        startingDate,
-        endingDate,
-        loggedVoiceChatConnections,
-        loggedVoiceChatEvents);
-  }
-
-  private Date parseDate(String dateString) {
-    try {
-      return new SimpleDateFormat("yyyy-MM-dd").parse(dateString);
-    } catch (ParseException e) {
-      return null;
-    }
-  }
-
-  private void sendPlayedGamesEmbed(
-      TextChannel textChannel,
-      String title,
-      List<LoggablePresence> loggedPresences) {
-    Map<String, UserGameData> userGameDataMap = userGameDataService.computeUserGameData(loggedPresences);
-
-    StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_PLAYED_GAMES_TITLE.get())
-        .append("\n");
-    for (UserGameData userGameData : userGameDataMap.values()) {
-      String username = userGameData.getUser().getName();
-
-      stringBuilder.append("### ").append(username).append("\n");
-      for (Entry<String, Long> entry : userGameData.getPlayedGames().entrySet()) {
-        String gameName = entry.getKey();
-        String formattedTime = SessionTimeUtil.formatMilliseconds(entry.getValue());
-        String playedGameLine = String.format("- %s (%s)\n",
-            gameName,
-            gameName.equals("Megabonk") ? "🖕" : formattedTime);
-
-        stringBuilder.append(playedGameLine);
-      }
-    }
-    textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.BLUE, title, stringBuilder.toString()).build()).queue();
-  }
-
-  private void sendPlayedMusicEmbed(
-      TextChannel textChannel,
-      String title,
-      List<LoggablePresence> loggedPresences) {
-    Map<String, UserMusicData> userMusicDataMap = userMusicDataService.computeUserMusicData(loggedPresences);
-
-    StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_LISTENED_MUSIC_TITLE.get())
-        .append("\n");
-    for (UserMusicData userMusicData : userMusicDataMap.values()) {
-      String username = userMusicData.getUser().getName();
-      List<ListenedArtist> listenedArtists = userMusicData.getListenedArtistsList();
-      int totalListenedSongs = listenedArtists.stream()
-          .mapToInt(listenedArtist -> listenedArtist.getListenedSongs().size()).sum();
-      listenedArtists = selectTopArtists(listenedArtists, 20);
-
-      stringBuilder.append("### ").append(username).append(" (")
-          .append(String.valueOf(totalListenedSongs)).append(")\n");
-      for (ListenedArtist listenedArtist : listenedArtists) {
-        String artistName = listenedArtist.getName();
-        stringBuilder.append("- ").append(artistName).append(" (")
-            .append(String.valueOf(listenedArtist.getListenedSongs().size())).append(")\n");
-      }
-    }
-    textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.GREEN, title, stringBuilder.toString()).build()).queue();
-    ;
-  }
-
-  private List<ListenedArtist> selectTopArtists(List<ListenedArtist> listenedArtists, int amount) {
-    listenedArtists.sort(Comparator.comparing(listenedArtist -> listenedArtist.getListenedSongs().size()));
-    listenedArtists = listenedArtists.reversed();
-
-    return listenedArtists.subList(0, Math.min(listenedArtists.size(), amount));
-  }
-
-  private void sendMessagesSentEmbed(
-      TextChannel textChannel,
-      String title,
-      List<LoggableMessage> loggedMessages) {
-    Map<String, UserMessageData> userMessageDataMap = userMessageDataService.computeUserMusicData(loggedMessages);
-    StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_TITLE.get())
-        .append("\n");
-
-    for (UserMessageData userMessageData : userMessageDataMap.values()) {
-      String username = userMessageData.getUser().getName();
-
-      stringBuilder.append("## ").append(username).append(" (").append(userMessageData.countOverallMessages())
-          .append(")\n");
-
-      for (String channelId : userMessageData.getMessagedChannelIds()) {
-        TextChannel messageChannel = bot.getChannelById(TextChannel.class, channelId);
-        if (messageChannel == null) {
-          LOGGER.error("Couldn't find text channel with ID '{}'", channelId);
-          continue;
+    /**
+     * Handles the interaction with the /wrapped <StartingDate> <EndingDate>
+     * command.
+     *
+     * @param event SlashCommandInteractionEvent.
+     */
+    public void handle(SlashCommandInteractionEvent event) {
+        String startingDateString = event.getOption("starting-date").getAsString();
+        String endingDateString = event.getOption("ending-date").getAsString();
+        Date startingDate = parseDate(startingDateString);
+        Date endingDate = parseDate(endingDateString);
+        if (startingDate == null || endingDate == null) {
+            event.getHook().editOriginalFormat("Invalid date format. Please use: yyyy-MM-dd. Ex: 2001-9-11").queue();
+            return;
         }
-        String messageChannelName = messageChannel.getName();
+        if (endingDate.before(startingDate)) {
+            event.getHook().editOriginalFormat("Final date must be AFTER initial date.").queue();
+            return;
+        }
+        event.reply("Processing stats...").queue();
 
-        stringBuilder.append("### ").append(messageChannelName).append(" (")
-            .append(userMessageData.countOverallMessages(channelId)).append(")\n");
-        stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_MESSAGES_LABEL.getFormatted(
-            userMessageData.countSentMessages(channelId))).append("\n");
-        stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_ATTACHMENTS_LABEL.getFormatted(
-            userMessageData.countSentAttachments(channelId))).append("\n");
-      }
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        String title = LocalizedMessage.GRAMMYS_WRAPPED_TITLE.getFormatted(
+                simpleDateFormat.format(startingDate),
+                simpleDateFormat.format(endingDate));
+        List<LoggablePresence> loggedPresences = statsService.fetchPresences(startingDate, endingDate);
+        List<LoggableMessage> loggedMessages = statsService.fetchMessages(startingDate, endingDate);
+        List<LoggableVoiceChatConnection> loggedVoiceChatConnections = statsService.fetchVoiceChatConnections(
+                startingDate,
+                endingDate);
+        List<LoggableVoiceChatEvent> loggedVoiceChatEvents = statsService.fetchVoiceChatEvents(startingDate,
+                endingDate);
+
+        List<FileUpload> fileUploads = new ArrayList<>();
+        try {
+            Files.list(Paths.get("."))
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().endsWith(".png"))
+                    .forEach(path -> {
+                        fileUploads.add(FileUpload.fromData(path));
+                    });
+        } catch (IOException e) {
+            LOGGER.error("Error uploading graph files. {}", e.getMessage());
+        }
+
+        TextChannel responseChannel = (TextChannel) event.getChannel();
+
+        sendPlayedGamesEmbed(
+                responseChannel,
+                title,
+                loggedPresences);
+        sendPlayedMusicEmbed(
+                responseChannel,
+                title,
+                loggedPresences);
+        sendMessagesSentEmbed(
+                responseChannel,
+                title,
+                loggedMessages);
+        sendVoiceChatEmbeds(
+                responseChannel,
+                title,
+                startingDate,
+                endingDate,
+                loggedVoiceChatConnections,
+                loggedVoiceChatEvents);
     }
-    textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.YELLOW, title, stringBuilder.toString()).build()).queue();
-  }
 
-  private void sendVoiceChatEmbeds(
-      TextChannel textChannel,
-      String title,
-      Date startingDate,
-      Date endingDate,
-      List<LoggableVoiceChatConnection> loggedVoiceChatConnections,
-      List<LoggableVoiceChatEvent> loggedVoiceChatEvents) {
-    VoiceChatData voiceChatData = userVoiceChatDataService
-        .computeUserVoiceChatData(
-            loggedVoiceChatConnections,
-            loggedVoiceChatEvents);
-    Map<String, UserVoiceChatData> userVoiceChatDataMap = voiceChatData.getUserVoiceChatData();
-    StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TITLE.get())
-        .append("\n");
-
-    List<FileUpload> fileUploads = new ArrayList<>();
-
-    chartService.generateGeneralVoiceChatTimeChart(
-        new ArrayList<>(userVoiceChatDataMap.values()),
-        startingDate,
-        endingDate);
-    fileUploads.add(FileUpload.fromData(Paths.get("overall.png")));
-
-    for (UserVoiceChatData userVoiceChatData : userVoiceChatDataMap.values()) {
-      String username = userVoiceChatData.getUser().getName();
-
-      stringBuilder.append("## ").append(username).append("\n");
-      stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_JOINED_VCS_LABEL.getFormatted(
-          userVoiceChatData.getJoinedVoiceChats())).append("\n");
-      stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_VC_TIME_LABEL.getFormatted(
-          SessionTimeUtil.formatMilliseconds(userVoiceChatData.getVoiceChatTimeMillis()))).append("\n");
-      stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_MUTED_TIME_LABEL.getFormatted(
-          SessionTimeUtil.formatMilliseconds(userVoiceChatData.getMutedVoiceChatTimeMillis()))).append("\n");
-      stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_DEAFENED_TIME_LABEL.getFormatted(
-          SessionTimeUtil.formatMilliseconds(userVoiceChatData.getDeafenedVoiceChatTimeMillis()))).append("\n");
-
-      chartService.generateUserVcTimeChart(
-          userVoiceChatData,
-          startingDate,
-          endingDate);
-      fileUploads.add(FileUpload.fromData(Paths.get(username + ".png")));
+    private Date parseDate(String dateString) {
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd").parse(dateString);
+        } catch (ParseException e) {
+            return null;
+        }
     }
-    MessageEmbed mainEmbed = EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString())
-        .setFooter(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHARTS_SENDING.get()).build();
 
-    textChannel.sendMessageEmbeds(mainEmbed).queue();
-    textChannel.sendFiles(fileUploads).queue();
-  }
+    private void sendPlayedGamesEmbed(
+            TextChannel textChannel,
+            String title,
+            List<LoggablePresence> loggedPresences) {
+        Map<String, UserGameData> userGameDataMap = userGameDataService.computeUserGameData(loggedPresences);
+
+        StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_PLAYED_GAMES_TITLE.get())
+                .append("\n");
+        for (UserGameData userGameData : userGameDataMap.values()) {
+            String username = userGameData.getUser().getName();
+
+            stringBuilder.append("### ").append(username).append("\n");
+            for (Entry<String, Long> entry : userGameData.getPlayedGames().entrySet()) {
+                String gameName = entry.getKey();
+                String formattedTime = TimeUtil.formatMilliseconds(entry.getValue());
+                String playedGameLine = String.format("- %s (%s)\n",
+                        gameName,
+                        gameName.equals("Megabonk") ? "🖕" : formattedTime);
+
+                stringBuilder.append(playedGameLine);
+            }
+        }
+        textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.BLUE, title, stringBuilder.toString()).build())
+                .queue();
+    }
+
+    private void sendPlayedMusicEmbed(
+            TextChannel textChannel,
+            String title,
+            List<LoggablePresence> loggedPresences) {
+        Map<String, UserMusicData> userMusicDataMap = userMusicDataService.computeUserMusicData(loggedPresences);
+
+        StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_LISTENED_MUSIC_TITLE.get())
+                .append("\n");
+        for (UserMusicData userMusicData : userMusicDataMap.values()) {
+            String username = userMusicData.getUser().getName();
+            List<ListenedArtist> listenedArtists = userMusicData.getListenedArtistsList();
+            int totalListenedSongs = listenedArtists.stream()
+                    .mapToInt(listenedArtist -> listenedArtist.getListenedSongs().size()).sum();
+            listenedArtists = selectTopArtists(listenedArtists, 20);
+
+            stringBuilder.append("### ").append(username).append(" (")
+                    .append(String.valueOf(totalListenedSongs)).append(")\n");
+            for (ListenedArtist listenedArtist : listenedArtists) {
+                String artistName = listenedArtist.getName();
+                stringBuilder.append("- ").append(artistName).append(" (")
+                        .append(String.valueOf(listenedArtist.getListenedSongs().size())).append(")\n");
+            }
+        }
+        textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.GREEN, title, stringBuilder.toString()).build())
+                .queue();
+        ;
+    }
+
+    private List<ListenedArtist> selectTopArtists(List<ListenedArtist> listenedArtists, int amount) {
+        listenedArtists.sort(Comparator.comparing(listenedArtist -> listenedArtist.getListenedSongs().size()));
+        listenedArtists = listenedArtists.reversed();
+
+        return listenedArtists.subList(0, Math.min(listenedArtists.size(), amount));
+    }
+
+    private void sendMessagesSentEmbed(
+            TextChannel textChannel,
+            String title,
+            List<LoggableMessage> loggedMessages) {
+        Map<String, UserMessageData> userMessageDataMap = userMessageDataService.computeUserMusicData(loggedMessages);
+        StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_TITLE.get())
+                .append("\n");
+
+        for (UserMessageData userMessageData : userMessageDataMap.values()) {
+            String username = userMessageData.getUser().getName();
+
+            stringBuilder.append("## ").append(username).append(" (").append(userMessageData.countOverallMessages())
+                    .append(")\n");
+
+            for (String channelId : userMessageData.getMessagedChannelIds()) {
+                TextChannel messageChannel = bot.getChannelById(TextChannel.class, channelId);
+                if (messageChannel == null) {
+                    LOGGER.error("Couldn't find text channel with ID '{}'", channelId);
+                    continue;
+                }
+                String messageChannelName = messageChannel.getName();
+
+                stringBuilder.append("### ").append(messageChannelName).append(" (")
+                        .append(userMessageData.countOverallMessages(channelId)).append(")\n");
+                stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_MESSAGES_LABEL.getFormatted(
+                        userMessageData.countSentMessages(channelId))).append("\n");
+                stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_SENT_MESSAGES_ATTACHMENTS_LABEL.getFormatted(
+                        userMessageData.countSentAttachments(channelId))).append("\n");
+            }
+        }
+        textChannel.sendMessageEmbeds(EmbedUtil.createEmbed(Color.YELLOW, title, stringBuilder.toString()).build())
+                .queue();
+    }
+
+    private void sendVoiceChatEmbeds(
+            TextChannel textChannel,
+            String title,
+            Date startingDate,
+            Date endingDate,
+            List<LoggableVoiceChatConnection> loggedVoiceChatConnections,
+            List<LoggableVoiceChatEvent> loggedVoiceChatEvents) {
+        VoiceChatData voiceChatData = userVoiceChatDataService
+                .computeUserVoiceChatData(
+                        loggedVoiceChatConnections,
+                        loggedVoiceChatEvents);
+        Map<String, UserVoiceChatData> userVoiceChatDataMap = voiceChatData.getUserVoiceChatData();
+        StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TITLE.get())
+                .append("\n");
+
+        List<FileUpload> fileUploads = new ArrayList<>();
+
+        chartService.generateGeneralVoiceChatTimeChart(
+                new ArrayList<>(userVoiceChatDataMap.values()),
+                startingDate,
+                endingDate);
+        fileUploads.add(FileUpload.fromData(Paths.get("overall.png")));
+
+        for (UserVoiceChatData userVoiceChatData : userVoiceChatDataMap.values()) {
+            String username = userVoiceChatData.getUser().getName();
+
+            stringBuilder.append("## ").append(username).append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_JOINED_VCS_LABEL.getFormatted(
+                    userVoiceChatData.getJoinedVoiceChats())).append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_VC_TIME_LABEL.getFormatted(
+                    TimeUtil.formatMilliseconds(userVoiceChatData.getVoiceChatTimeMillis()))).append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_MUTED_TIME_LABEL.getFormatted(
+                    TimeUtil.formatMilliseconds(userVoiceChatData.getMutedVoiceChatTimeMillis()))).append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_DEAFENED_TIME_LABEL.getFormatted(
+                    TimeUtil.formatMilliseconds(userVoiceChatData.getDeafenedVoiceChatTimeMillis()))).append("\n");
+
+            chartService.generateUserVcTimeChart(
+                    userVoiceChatData,
+                    startingDate,
+                    endingDate);
+            fileUploads.add(FileUpload.fromData(Paths.get(username + ".png")));
+        }
+        MessageEmbed mainEmbed = EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString())
+                .setFooter(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHARTS_SENDING.get()).build();
+
+        textChannel.sendMessageEmbeds(mainEmbed).queue();
+        textChannel.sendFiles(fileUploads).queue();
+    }
 
 }
