@@ -84,8 +84,8 @@ public class Bot extends ListenerAdapter {
                             .addOption(OptionType.STRING, "ending-date", "Date at which the summary will end", true),
                     Commands.slash("yavengo", "Inicia un contador del tiempo en el que viene alguien")
                             .addOption(OptionType.USER, "user",
-                                    "Usuario que ya viene. Dejar en blanco para usarlo en uno mismo", false))
-
+                                    "Usuario que ya viene. Dejar en blanco para usarlo en uno mismo", false),
+                    Commands.slash("postelectricitystatusembed", "Publica el seguidor de Corpoelec"))
                     .queue(
                             success -> LOGGER.info("Successfully registered commands."),
                             failure -> LOGGER.error("Failed to register commands. {}", failure.getMessage()));
