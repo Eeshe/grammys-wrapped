@@ -1,8 +1,8 @@
 package me.eeshe.grammyswrapped.service;
 
-import java.time.Duration;
+import java.time.Instant;
 
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 
 public interface ElectricityStatusEmbedService {
@@ -11,9 +11,9 @@ public interface ElectricityStatusEmbedService {
 
     void sendElectricityInEstimateModal(ButtonInteractionEvent event);
 
-    void addElectricityOutEntry(String messageId, User user, Duration electricityInEstimate);
+    void addElectricityOutEntry(String messageId, Member member, Instant electricityInEstimate);
 
-    void addElectricityInEntry(String messageId, User user);
+    void addElectricityInEntry(String messageId, Member member);
 
     void deleteElectricityStatusEmbed(String messageId);
 }

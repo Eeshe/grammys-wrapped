@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,16 +32,17 @@ public class ElectricityStatusEmbedRepositoryImpl implements ElectricityStatusEm
                 message_id VARCHAR(255) NOT NULL
                     REFERENCES electricity_status_embeds(message_id) ON DELETE CASCADE,
                 user_id VARCHAR(255) NOT NULL,
+                nickname VARCHAR(255),
                 last_electricity_out_time TIMESTAMPTZ,
                 last_electricity_in_time TIMESTAMPTZ,
                 last_reminder_time TIMESTAMPTZ,
-                electricity_in_estimate BIGINT,
+                electricity_in_estimate TIMESTAMPTZ,
                 PRIMARY KEY (message_id, user_id)
             )""";
 
     private static final String SELECT_ALL_EMBEDS_SQL = """
             SELECT e.message_id, e.guild_id, e.channel_id, e.updated_at,
-                   u.user_id, u.last_electricity_out_time, u.last_electricity_in_time,
+                   u.user_id, u.nickname, u.last_electricity_out_time, u.last_electricity_in_time,
                    u.last_reminder_time, u.electricity_in_estimate
             FROM electricity_status_embeds e
             LEFT JOIN user_electricity_status u ON u.message_id = e.message_id
@@ -51,7 +51,7 @@ public class ElectricityStatusEmbedRepositoryImpl implements ElectricityStatusEm
 
     private static final String SELECT_EMBED_BY_MESSAGE_ID_SQL = """
             SELECT e.message_id, e.guild_id, e.channel_id, e.updated_at,
-                   u.user_id, u.last_electricity_out_time, u.last_electricity_in_time,
+                   u.user_id, u.nickname, u.last_electricity_out_time, u.last_electricity_in_time,
                    u.last_reminder_time, u.electricity_in_estimate
             FROM electricity_status_embeds e
             LEFT JOIN user_electricity_status u ON u.message_id = e.message_id
@@ -67,18 +67,16 @@ public class ElectricityStatusEmbedRepositoryImpl implements ElectricityStatusEm
                 updated_at = EXCLUDED.updated_at
             """;
 
-    private static final String DELETE_PARTICIPANTS_SQL =
-            "DELETE FROM user_electricity_status WHERE message_id = ?";
+    private static final String DELETE_PARTICIPANTS_SQL = "DELETE FROM user_electricity_status WHERE message_id = ?";
 
     private static final String INSERT_PARTICIPANT_SQL = """
             INSERT INTO user_electricity_status (
-                message_id, user_id, last_electricity_out_time, last_electricity_in_time,
+                message_id, user_id, nickname, last_electricity_out_time, last_electricity_in_time,
                 last_reminder_time, electricity_in_estimate)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
 
-    private static final String DELETE_EMBED_SQL =
-            "DELETE FROM electricity_status_embeds WHERE message_id = ?";
+    private static final String DELETE_EMBED_SQL = "DELETE FROM electricity_status_embeds WHERE message_id = ?";
 
     private final PostgreSQLDatabase database;
 
@@ -152,11 +150,11 @@ public class ElectricityStatusEmbedRepositoryImpl implements ElectricityStatusEm
             UserElectricityStatus participant) throws SQLException {
         preparedStatement.setString(1, messageId);
         preparedStatement.setString(2, participant.getUserId());
-        preparedStatement.setTimestamp(3, toTimestamp(participant.getLastElectricityOutTime()));
-        preparedStatement.setTimestamp(4, toTimestamp(participant.getLastElectricityInTime()));
-        preparedStatement.setTimestamp(5, toTimestamp(participant.getLastReminderTime()));
-        preparedStatement.setObject(6, participant.getElectricityInEstimate() != null
-                ? participant.getElectricityInEstimate().toMillis() : null);
+        preparedStatement.setString(3, participant.getNickname());
+        preparedStatement.setTimestamp(4, toTimestamp(participant.getLastElectricityOutTime()));
+        preparedStatement.setTimestamp(5, toTimestamp(participant.getLastElectricityInTime()));
+        preparedStatement.setTimestamp(6, toTimestamp(participant.getLastReminderTime()));
+        preparedStatement.setObject(7, toTimestamp(participant.getElectricityInEstimate()));
     }
 
     private Timestamp toTimestamp(Instant instant) {
@@ -213,15 +211,13 @@ public class ElectricityStatusEmbedRepositoryImpl implements ElectricityStatusEm
     }
 
     private UserElectricityStatus parseParticipant(ResultSet resultSet) throws SQLException {
-        final long electricityInEstimateMillis = resultSet.getLong("electricity_in_estimate");
-        final Duration electricityInEstimate = resultSet.wasNull()
-                ? null : Duration.ofMillis(electricityInEstimateMillis);
         return new UserElectricityStatus(
                 resultSet.getString("user_id"),
+                resultSet.getString("nickname"),
                 toInstant(resultSet, "last_electricity_out_time"),
                 toInstant(resultSet, "last_electricity_in_time"),
                 toInstant(resultSet, "last_reminder_time"),
-                electricityInEstimate);
+                toInstant(resultSet, "electricity_in_estimate"));
     }
 
     private Instant toInstant(ResultSet resultSet, String column) throws SQLException {

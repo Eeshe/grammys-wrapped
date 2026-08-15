@@ -23,5 +23,7 @@ public class PostElectricityStatusCommand {
         final String channelId = event.getChannelId();
 
         electricityStatusService.postElectricityStatusEmbed(guildId, channelId);
+        event.deferReply(true).queue();
+        event.getHook().deleteOriginal().queue();
     }
 }

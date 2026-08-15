@@ -116,4 +116,12 @@ public class TimeUtil {
     public static ZoneId getZoneId() {
         return ZoneId.of(TIME_ZONE_ID);
     }
+
+    public static String formatHHMMTimestamp(long timeMillis) {
+        return String.format("<t:%s:t>", timeMillis / 1000);
+    }
+
+    public static String formatRelativeTimestamp(long timeMillis) {
+        return String.format("<t:%s:R>", timeMillis / 1000);
+    }
 }

@@ -1,5 +1,8 @@
 package me.eeshe.grammyswrapped.listeners;
 
+import java.time.Duration;
+import java.time.Instant;
+
 import me.eeshe.grammyswrapped.model.LocalizedMessage;
 import me.eeshe.grammyswrapped.service.ElectricityStatusEmbedService;
 import me.eeshe.grammyswrapped.util.TimeUtil;
@@ -28,7 +31,8 @@ public class ElectricityStatusListener extends ListenerAdapter {
         final String messageId = event.getMessageId();
         final String buttonId = event.getButton().getCustomId();
         if (buttonId.equals("electricity_in")) {
-            electricityStatusService.addElectricityInEntry(messageId, event.getUser());
+            electricityStatusService.addElectricityInEntry(messageId, event.getMember());
+            event.deferEdit().queue();
         } else if (buttonId.equals("electricity_out")) {
             electricityStatusService.sendElectricityInEstimateModal(event);
         }
@@ -39,11 +43,21 @@ public class ElectricityStatusListener extends ListenerAdapter {
         if (!event.getModalId().equals("electricity_in_estimate")) {
             return;
         }
-        final String timeInput = event.getValue("time").getAsString();
-        final Long awayTime = TimeUtil.parseTime(timeInput);
-        if (awayTime == null) {
+        String timeInput = event.getValue("time").getAsOptionalString();
+        if (timeInput == null) {
+            timeInput = "6h";
+        }
+        final Long electricityInEstimateMillis = TimeUtil.parseTime(timeInput);
+        if (electricityInEstimateMillis == null) {
             event.reply(LocalizedMessage.INVALID_TIME_FORMAT.get()).setEphemeral(true).queue();
             return;
         }
+        final Instant electricityInEstimate = Instant.now().plus(Duration.ofMillis(electricityInEstimateMillis));
+
+        event.deferEdit().queue();
+        electricityStatusService.addElectricityOutEntry(
+                event.getMessage().getId(),
+                event.getMember(),
+                electricityInEstimate);
     }
 }

@@ -40,6 +40,23 @@ public enum LocalizedMessage {
 
     ELECTRICITY_STATUS_EMBED_TITLE("electricity-status.embed.title"),
     ELECTRICITY_STATUS_EMBED_EMPTY_DESCRIPTION("electricity-status.embed.empty-description"),
+    ELECTRICITY_STATUS_EMBED_DESCRIPTION_NICKNAME_WITH_ELECTRICITY(
+            "electricity-status.embed.description.nickname.with-electricity"),
+    ELECTRICITY_STATUS_EMBED_DESCRIPTION_NICKNAME_WITHOUT_ELECTRICITY(
+            "electricity-status.embed.description.nickname.without-electricity"),
+    ELECTRICITY_STATUS_EMBED_DESCRIPTION_STATUS_WITH_ELECTRICITY_PRE_OUTAGE(
+            "electricity-status.embed.description.status.with-electricity-pre-outage"),
+    ELECTRICITY_STATUS_EMBED_DESCRIPTION_STATUS_WITH_ELECTRICITY_POST_OUTAGE(
+            "electricity-status.embed.description.status.with-electricity-post-outage"),
+    ELECTRICITY_STATUS_EMBED_DESCRIPTION_STATUS_WITHOUT_ELECTRICITY(
+            "electricity-status.embed.description.status.without-electricity"),
+    ELECTRICITY_STATUS_EMBED_DESCRIPTION_ESTIMATE_WITH_ELECTRICITY_PRE_OUTAGE(
+            "electricity-status.embed.description.estimate.with-electricity-pre-outage"),
+    ELECTRICITY_STATUS_EMBED_DESCRIPTION_ESTIMATE_WITH_ELECTRICITY_POST_OUTAGE(
+            "electricity-status.embed.description.estimate.with-electricity-post-outage"),
+    ELECTRICITY_STATUS_EMBED_DESCRIPTION_ESTIMATE_WITHOUT_ELECTRICITY(
+            "electricity-status.embed.description.estimate.without-electricity"),
+    ELECTRICITY_STATUS_EMBED_FOOTER("electricity-status.embed.footer"),
     ELECTRICITY_STATUS_EMBED_ELECTRICITY_OUT_BUTTON("electricity-status.embed.electricity-out-button"),
     ELECTRICITY_STATUS_EMBED_ELECTRICITY_IN_BUTTON("electricity-status.embed.electricity-in-button"),
 

@@ -1,6 +1,8 @@
 package me.eeshe.grammyswrapped;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
@@ -13,6 +15,7 @@ import me.eeshe.grammyswrapped.listeners.StatsListener;
 import me.eeshe.grammyswrapped.listeners.YaVengoListener;
 import me.eeshe.grammyswrapped.model.LocalizedMessage;
 import me.eeshe.grammyswrapped.repository.ElectricityStatusEmbedRepository;
+import me.eeshe.grammyswrapped.repository.Repository;
 import me.eeshe.grammyswrapped.repository.YaVengoRepository;
 import me.eeshe.grammyswrapped.repository.impl.ElectricityStatusEmbedRepositoryImpl;
 import me.eeshe.grammyswrapped.service.ElectricityStatusEmbedService;
@@ -36,19 +39,19 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 public class Bot extends ListenerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(Bot.class);
-    private final ConcurrentHashMap<String, User> yaVengoTargets = new ConcurrentHashMap<>();
 
-    private final YaVengoRepository yaVengoRepository;
+    private final ConcurrentHashMap<String, User> yaVengoTargets = new ConcurrentHashMap<>();
+    private final List<Repository> repositories = new ArrayList<>();
+
+    private YaVengoRepository yaVengoRepository;
     private ElectricityStatusEmbedRepository electricityStatusEmbedRepository;
 
-    private final StatsService statsService;
+    private StatsService statsService;
     private ElectricityStatusEmbedService electricityStatusService;
 
     private JDA bot;
 
     public Bot() {
-        this.statsService = new StatsService();
-        this.yaVengoRepository = new YaVengoRepository();
     }
 
     public void start() {
@@ -60,10 +63,6 @@ public class Bot extends ListenerAdapter {
             LOGGER.error(LocalizedMessage.BOT_TOKEN_NOT_CONFIGURED.get());
             return;
         }
-        initializeRepositories();
-        initializeServices();
-        statsService.createStatsTables();
-
         this.bot = JDABuilder.createDefault(
                 botToken,
                 EnumSet.of(
@@ -72,27 +71,47 @@ public class Bot extends ListenerAdapter {
                         GatewayIntent.GUILD_VOICE_STATES,
                         GatewayIntent.GUILD_MESSAGES,
                         GatewayIntent.MESSAGE_CONTENT))
-                .addEventListeners(this)
-                .addEventListeners(new StatsListener(statsService))
-                .addEventListeners(new YaVengoListener(yaVengoRepository))
-                .addEventListeners(new ElectricityStatusListener(electricityStatusService))
                 .enableCache(CacheFlag.ACTIVITY)
                 .setMemberCachePolicy(MemberCachePolicy.ALL)
                 .build();
 
-        bot.addEventListener(new CommandListener(bot, statsService, yaVengoRepository));
+        initializeRepositories();
+        initializeServices();
 
+        addListeners();
         addCommands();
     }
 
     private void initializeRepositories() {
+        this.yaVengoRepository = new YaVengoRepository();
         this.electricityStatusEmbedRepository = new ElectricityStatusEmbedRepositoryImpl(
                 PostgreSQLDatabase.getInstance());
+
+        repositories.addAll(List.of(
+                electricityStatusEmbedRepository));
+        for (Repository repository : repositories) {
+            repository.onStart();
+        }
     }
 
     private void initializeServices() {
-        electricityStatusEmbedRepository.onStart();
+        this.statsService = new StatsService();
         this.electricityStatusService = new ElectricityStatusEmbedServiceImpl(bot, electricityStatusEmbedRepository);
+
+        statsService.createStatsTables();
+    }
+
+    private void addListeners() {
+        bot.addEventListener(this);
+        bot.addEventListener(new StatsListener(statsService));
+        bot.addEventListener(new YaVengoListener(yaVengoRepository));
+        bot.addEventListener(new ElectricityStatusListener(electricityStatusService));
+
+        bot.addEventListener(new CommandListener(
+                bot,
+                statsService,
+                yaVengoRepository,
+                electricityStatusService));
     }
 
     /**

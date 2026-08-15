@@ -1,8 +1,11 @@
 package me.eeshe.grammyswrapped.service.impl;
 
 import java.awt.Color;
-import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 
 import me.eeshe.grammyswrapped.model.ElectricityStatusEmbed;
 import me.eeshe.grammyswrapped.model.LocalizedMessage;
@@ -10,14 +13,15 @@ import me.eeshe.grammyswrapped.model.UserElectricityStatus;
 import me.eeshe.grammyswrapped.repository.ElectricityStatusEmbedRepository;
 import me.eeshe.grammyswrapped.service.ElectricityStatusEmbedService;
 import me.eeshe.grammyswrapped.util.EmbedUtil;
+import me.eeshe.grammyswrapped.util.TimeUtil;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.modals.Modal;
@@ -39,14 +43,13 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
         if (textChannel == null) {
             return;
         }
-        textChannel.sendMessageEmbeds(createElectricityStatusEmbed())
+        textChannel.sendMessageEmbeds(createElectricityStatusEmbed(new ArrayList<>()))
                 .addComponents(createElectrictyStatusButtons())
                 .queue(message -> {
                     final ElectricityStatusEmbed electricityStatusEmbed = new ElectricityStatusEmbed(
                             guildId,
                             channelId,
                             message.getId());
-
                     electricityStatusEmbedRepository.save(electricityStatusEmbed);
                 });
     }
@@ -74,19 +77,25 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
                                 TextInput.create("time", TextInputStyle.SHORT)
                                         .setPlaceholder(
                                                 LocalizedMessage.ELECTRICITY_IN_MODAL_QUESTION_PLACEHOLDER.get())
-                                        .setRequired(true).build()))
+                                        .setRequired(false).build()))
                 .build();
     }
 
     @Override
-    public void addElectricityOutEntry(String messageId, User user, Duration electricityInEstimate) {
+    public void addElectricityOutEntry(String messageId, Member member, Instant electricityInEstimate) {
         final ElectricityStatusEmbed electricityStatusEmbed = electricityStatusEmbedRepository
                 .getByMessageId(messageId);
         if (electricityStatusEmbed == null) {
             return;
         }
-        final UserElectricityStatus userElectricityStatus = electricityStatusEmbed.getParticipant(user.getId());
+        final UserElectricityStatus userElectricityStatus = electricityStatusEmbed
+                .getParticipant(member.getUser().getId());
+        String nickname = member.getNickname();
+        if (nickname == null) {
+            nickname = member.getUser().getGlobalName();
+        }
 
+        userElectricityStatus.setNickname(nickname);
         userElectricityStatus.setLastElectricityOutTime(Instant.now());
         userElectricityStatus.setElectricityInEstimate(electricityInEstimate);
         userElectricityStatus.setLastReminderTime(Instant.now());
@@ -98,14 +107,20 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
     }
 
     @Override
-    public void addElectricityInEntry(String messageId, User user) {
+    public void addElectricityInEntry(String messageId, Member member) {
         final ElectricityStatusEmbed electricityStatusEmbed = electricityStatusEmbedRepository
                 .getByMessageId(messageId);
         if (electricityStatusEmbed == null) {
             return;
         }
-        final UserElectricityStatus userElectricityStatus = electricityStatusEmbed.getParticipant(user.getId());
+        final UserElectricityStatus userElectricityStatus = electricityStatusEmbed
+                .getParticipant(member.getUser().getId());
+        String nickname = member.getNickname();
+        if (nickname == null) {
+            nickname = member.getUser().getGlobalName();
+        }
 
+        userElectricityStatus.setNickname(nickname);
         userElectricityStatus.setLastElectricityInTime(Instant.now());
 
         electricityStatusEmbed.addParticipant(userElectricityStatus);
@@ -117,16 +132,77 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
     private void updateElectricityStatusEmbed(ElectricityStatusEmbed electricityStatusEmbed) {
         final TextChannel textChannel = bot.getTextChannelById(electricityStatusEmbed.getChannelId());
         textChannel.retrieveMessageById(electricityStatusEmbed.getMessageId()).queue(message -> {
-            message.editMessageEmbeds(createElectricityStatusEmbed()).queue();
+            message.editMessageEmbeds(
+                    createElectricityStatusEmbed(electricityStatusEmbed.getParticipants().values()))
+                    .queue();
         });
     }
 
-    private MessageEmbed createElectricityStatusEmbed() {
+    private MessageEmbed createElectricityStatusEmbed(Collection<UserElectricityStatus> participants) {
         return EmbedUtil.createEmbed(
                 Color.YELLOW,
                 LocalizedMessage.ELECTRICITY_STATUS_EMBED_TITLE.get(),
-                LocalizedMessage.ELECTRICITY_STATUS_EMBED_EMPTY_DESCRIPTION.get())
+                generateEmbedDescription(new ArrayList<>(participants)))
+                .setFooter(LocalizedMessage.ELECTRICITY_STATUS_EMBED_FOOTER.get())
+                .setTimestamp(null)
                 .build();
+    }
+
+    private String generateEmbedDescription(List<UserElectricityStatus> participants) {
+        if (participants.isEmpty()) {
+            return LocalizedMessage.ELECTRICITY_STATUS_EMBED_EMPTY_DESCRIPTION.get();
+        }
+        participants.sort(Comparator.comparing(participant -> participant.getNickname().toLowerCase()));
+
+        final StringBuilder descriptionBuilder = new StringBuilder();
+        for (UserElectricityStatus participant : participants) {
+            descriptionBuilder.append(generateNicknameLine(participant)).append("\n");
+            descriptionBuilder.append(generateElectricityStatusLine(participant)).append("\n");
+            descriptionBuilder.append(generateElectricityEstimateLine(participant)).append("\n");
+
+            descriptionBuilder.append("\n");
+        }
+        return descriptionBuilder.toString();
+    }
+
+    private String generateNicknameLine(UserElectricityStatus userElectricityStatus) {
+        final String nickname = userElectricityStatus.getNickname();
+
+        return userElectricityStatus.hasElectricity()
+                ? LocalizedMessage.ELECTRICITY_STATUS_EMBED_DESCRIPTION_NICKNAME_WITH_ELECTRICITY
+                        .getFormatted(nickname)
+                : LocalizedMessage.ELECTRICITY_STATUS_EMBED_DESCRIPTION_NICKNAME_WITHOUT_ELECTRICITY
+                        .getFormatted(nickname);
+
+    }
+
+    private String generateElectricityStatusLine(UserElectricityStatus userElectricityStatus) {
+        if (!userElectricityStatus.hasElectricity()) {
+            return LocalizedMessage.ELECTRICITY_STATUS_EMBED_DESCRIPTION_STATUS_WITHOUT_ELECTRICITY.getFormatted(
+                    TimeUtil.formatHHMMTimestamp(userElectricityStatus.getLastElectricityOutTime().toEpochMilli()),
+                    TimeUtil.formatRelativeTimestamp(userElectricityStatus.getLastElectricityOutTime().toEpochMilli()));
+        }
+        if (!userElectricityStatus.hasHadEletricityOutToday()) {
+            return LocalizedMessage.ELECTRICITY_STATUS_EMBED_DESCRIPTION_STATUS_WITH_ELECTRICITY_PRE_OUTAGE.get();
+        }
+        return LocalizedMessage.ELECTRICITY_STATUS_EMBED_DESCRIPTION_STATUS_WITH_ELECTRICITY_POST_OUTAGE.getFormatted(
+                TimeUtil.formatHHMMTimestamp(userElectricityStatus.getLastElectricityOutTime().toEpochMilli()),
+                TimeUtil.formatHHMMTimestamp(userElectricityStatus.getLastElectricityInTime().toEpochMilli()),
+                TimeUtil.formatMilliseconds(userElectricityStatus.calculateLastElectricityOutageDuration().toMillis()));
+    }
+
+    private String generateElectricityEstimateLine(UserElectricityStatus userElectricityStatus) {
+        if (!userElectricityStatus.hasElectricity()) {
+            return LocalizedMessage.ELECTRICITY_STATUS_EMBED_DESCRIPTION_ESTIMATE_WITHOUT_ELECTRICITY.getFormatted(
+                    TimeUtil.formatHHMMTimestamp(userElectricityStatus.getElectricityInEstimate().toEpochMilli()),
+                    TimeUtil.formatRelativeTimestamp(userElectricityStatus.getElectricityInEstimate().toEpochMilli()));
+        }
+        if (userElectricityStatus.hasHadEletricityOutToday()) {
+            return LocalizedMessage.ELECTRICITY_STATUS_EMBED_DESCRIPTION_ESTIMATE_WITH_ELECTRICITY_POST_OUTAGE.get();
+        }
+        return LocalizedMessage.ELECTRICITY_STATUS_EMBED_DESCRIPTION_ESTIMATE_WITH_ELECTRICITY_PRE_OUTAGE.getFormatted(
+                TimeUtil.formatMilliseconds(
+                        userElectricityStatus.calculateTimeSinceLastElectricityOutage().toMillis()));
     }
 
     @Override

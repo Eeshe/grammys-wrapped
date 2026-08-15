@@ -38,7 +38,7 @@ public class YaVengoEmbed {
                 .setDescription(description.getFormatted(
                         target.getAsMention(),
                         TimeUtil.formatMilliseconds(awayTimeMillis),
-                        generateTimestampString()))
+                        TimeUtil.formatRelativeTimestamp(arrivalTimeMillis)))
                 .setColor(embedColor)
                 .setImage(LocalizedMessage.YA_VENGO_EMBED_RUNNING_IMAGE.get())
                 .build();
@@ -68,10 +68,6 @@ public class YaVengoEmbed {
 
     public ActionRow createEmbedActionRow() {
         return ActionRow.of(Button.danger("stop_ya_vengo", LocalizedMessage.YA_VENGO_EMBED_RUNNING_BUTTON.get()));
-    }
-
-    private String generateTimestampString() {
-        return String.format("<t:%s:R>", arrivalTimeMillis / 1000);
     }
 
     public boolean isPastArrivalTime() {
