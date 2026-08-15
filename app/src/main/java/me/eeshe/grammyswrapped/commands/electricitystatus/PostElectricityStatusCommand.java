@@ -4,15 +4,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.commands.WrappedCommand;
-import me.eeshe.grammyswrapped.service.ElectricityStatusService;
+import me.eeshe.grammyswrapped.service.ElectricityStatusEmbedService;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 public class PostElectricityStatusCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(WrappedCommand.class);
 
-    private final ElectricityStatusService electricityStatusService;
+    private final ElectricityStatusEmbedService electricityStatusService;
 
-    public PostElectricityStatusCommand(ElectricityStatusService electricityStatusEmbedService) {
+    public PostElectricityStatusCommand(ElectricityStatusEmbedService electricityStatusEmbedService) {
         this.electricityStatusService = electricityStatusEmbedService;
     }
 

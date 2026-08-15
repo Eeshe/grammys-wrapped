@@ -6,13 +6,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import me.eeshe.grammyswrapped.database.PostgreSQLDatabase;
 import me.eeshe.grammyswrapped.listeners.CommandListener;
+import me.eeshe.grammyswrapped.listeners.ElectricityStatusListener;
 import me.eeshe.grammyswrapped.listeners.StatsListener;
 import me.eeshe.grammyswrapped.listeners.YaVengoListener;
 import me.eeshe.grammyswrapped.model.LocalizedMessage;
+import me.eeshe.grammyswrapped.repository.ElectricityStatusEmbedRepository;
 import me.eeshe.grammyswrapped.repository.YaVengoRepository;
+import me.eeshe.grammyswrapped.repository.impl.ElectricityStatusEmbedRepositoryImpl;
+import me.eeshe.grammyswrapped.service.ElectricityStatusEmbedService;
 import me.eeshe.grammyswrapped.service.LocalizationService;
 import me.eeshe.grammyswrapped.service.StatsService;
+import me.eeshe.grammyswrapped.service.impl.ElectricityStatusEmbedServiceImpl;
 import me.eeshe.grammyswrapped.util.AppConfig;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -32,8 +38,12 @@ public class Bot extends ListenerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(Bot.class);
     private final ConcurrentHashMap<String, User> yaVengoTargets = new ConcurrentHashMap<>();
 
-    private final StatsService statsService;
     private final YaVengoRepository yaVengoRepository;
+    private ElectricityStatusEmbedRepository electricityStatusEmbedRepository;
+
+    private final StatsService statsService;
+    private ElectricityStatusEmbedService electricityStatusService;
+
     private JDA bot;
 
     public Bot() {
@@ -50,6 +60,8 @@ public class Bot extends ListenerAdapter {
             LOGGER.error(LocalizedMessage.BOT_TOKEN_NOT_CONFIGURED.get());
             return;
         }
+        initializeRepositories();
+        initializeServices();
         statsService.createStatsTables();
 
         this.bot = JDABuilder.createDefault(
@@ -63,6 +75,7 @@ public class Bot extends ListenerAdapter {
                 .addEventListeners(this)
                 .addEventListeners(new StatsListener(statsService))
                 .addEventListeners(new YaVengoListener(yaVengoRepository))
+                .addEventListeners(new ElectricityStatusListener(electricityStatusService))
                 .enableCache(CacheFlag.ACTIVITY)
                 .setMemberCachePolicy(MemberCachePolicy.ALL)
                 .build();
@@ -70,6 +83,16 @@ public class Bot extends ListenerAdapter {
         bot.addEventListener(new CommandListener(bot, statsService, yaVengoRepository));
 
         addCommands();
+    }
+
+    private void initializeRepositories() {
+        this.electricityStatusEmbedRepository = new ElectricityStatusEmbedRepositoryImpl(
+                PostgreSQLDatabase.getInstance());
+    }
+
+    private void initializeServices() {
+        electricityStatusEmbedRepository.onStart();
+        this.electricityStatusService = new ElectricityStatusEmbedServiceImpl(bot, electricityStatusEmbedRepository);
     }
 
     /**

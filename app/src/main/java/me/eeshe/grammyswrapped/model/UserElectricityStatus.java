@@ -3,8 +3,6 @@ package me.eeshe.grammyswrapped.model;
 import java.time.Duration;
 import java.time.Instant;
 
-import net.dv8tion.jda.api.entities.User;
-
 public class UserElectricityStatus {
     private final String userId;
 
@@ -13,8 +11,8 @@ public class UserElectricityStatus {
     private Instant lastReminderTime;
     private Duration electricityInEstimate;
 
-    public UserElectricityStatus(User user) {
-        this.userId = user.getId();
+    public UserElectricityStatus(String userId) {
+        this.userId = userId;
     }
 
     public UserElectricityStatus(String userId, Instant lastElectricityOutTime,

@@ -4,6 +4,8 @@ import me.eeshe.grammyswrapped.service.LocalizationService;
 
 public enum LocalizedMessage {
     BOT_TOKEN_NOT_CONFIGURED("bot.token.not_configured"),
+    INVALID_TIME_FORMAT("invalid-time-format"),
+
     GRAMMYS_WRAPPED_TITLE("wrapped.title"),
     GRAMMYS_WRAPPED_PLAYED_GAMES_TITLE("wrapped.played_games.title"),
     GRAMMYS_WRAPPED_LISTENED_MUSIC_TITLE("wrapped.listened_music.title"),
@@ -24,7 +26,6 @@ public enum LocalizedMessage {
     YA_VENGO_MODAL_TITLE("ya-vengo.modal.title"),
     YA_VENGO_MODAL_QUESTION("ya-vengo.modal.question"),
     YA_VENGO_MODAL_QUESTION_PLACEHOLDER("ya-vengo.modal.question-placeholder"),
-    YA_VENGO_INVALID_TIME_FORMAT("ya-vengo.invalid-time-format"),
 
     YA_VENGO_EMBED_RUNNING_TITLE("ya-vengo.embed.running.title"),
     YA_VENGO_EMBED_RUNNING_IMAGE("ya-vengo.embed.running.image"),
@@ -36,6 +37,15 @@ public enum LocalizedMessage {
     YA_VENGO_EMBED_STOPPED_IMAGE("ya-vengo.embed.stopped.image"),
     YA_VENGO_EMBED_STOPPED_DESCRIPTION_POSITIVE("ya-vengo.embed.stopped.description.positive"),
     YA_VENGO_EMBED_STOPPED_DESCRIPTION_NEGATIVE("ya-vengo.embed.stopped.description.negative"),
+
+    ELECTRICITY_STATUS_EMBED_TITLE("electricity-status.embed.title"),
+    ELECTRICITY_STATUS_EMBED_EMPTY_DESCRIPTION("electricity-status.embed.empty-description"),
+    ELECTRICITY_STATUS_EMBED_ELECTRICITY_OUT_BUTTON("electricity-status.embed.electricity-out-button"),
+    ELECTRICITY_STATUS_EMBED_ELECTRICITY_IN_BUTTON("electricity-status.embed.electricity-in-button"),
+
+    ELECTRICITY_IN_MODAL_TITLE("electricity-in.modal.title"),
+    ELECTRICITY_IN_MODAL_QUESTION("electricity-in.modal.question"),
+    ELECTRICITY_IN_MODAL_QUESTION_PLACEHOLDER("electricity-in.modal.question-placeholder"),
     ;
 
     private final String key;

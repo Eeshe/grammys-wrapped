@@ -41,7 +41,7 @@ public class YaVengoListener extends ListenerAdapter {
         final String timeInput = event.getValue("time").getAsString();
         final Long awayTime = TimeUtil.parseTime(timeInput);
         if (awayTime == null) {
-            event.reply(LocalizedMessage.YA_VENGO_INVALID_TIME_FORMAT.get()).setEphemeral(true).queue();
+            event.reply(LocalizedMessage.INVALID_TIME_FORMAT.get()).setEphemeral(true).queue();
             return;
         }
         final YaVengoEmbed yaVengoEmbed = new YaVengoEmbed(target, awayTime);

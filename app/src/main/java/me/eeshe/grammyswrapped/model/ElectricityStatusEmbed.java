@@ -2,6 +2,7 @@ package me.eeshe.grammyswrapped.model;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ElectricityStatusEmbed {
     private final String guildId;
@@ -14,12 +15,11 @@ public class ElectricityStatusEmbed {
     public ElectricityStatusEmbed(
             String guildId,
             String channelId,
-            String messageId,
-            Map<String, UserElectricityStatus> participants) {
+            String messageId) {
         this.guildId = guildId;
         this.channelId = channelId;
         this.messageId = messageId;
-        this.participants = participants;
+        this.participants = new ConcurrentHashMap<>();
 
         updateUpdatedAt();
     }
@@ -51,6 +51,10 @@ public class ElectricityStatusEmbed {
 
     public Map<String, UserElectricityStatus> getParticipants() {
         return participants;
+    }
+
+    public UserElectricityStatus getParticipant(String userId) {
+        return participants.getOrDefault(userId, new UserElectricityStatus(userId));
     }
 
     public void addParticipant(UserElectricityStatus userElectricityStatus) {
