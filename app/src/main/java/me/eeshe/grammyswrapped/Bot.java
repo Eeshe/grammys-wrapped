@@ -96,7 +96,10 @@ public class Bot extends ListenerAdapter {
 
     private void initializeServices() {
         this.statsService = new StatsService();
-        this.electricityStatusService = new ElectricityStatusEmbedServiceImpl(bot, electricityStatusEmbedRepository);
+        this.electricityStatusService = new ElectricityStatusEmbedServiceImpl(
+                bot, 
+                electricityStatusEmbedRepository,
+                statsService);
 
         statsService.createStatsTables();
     }

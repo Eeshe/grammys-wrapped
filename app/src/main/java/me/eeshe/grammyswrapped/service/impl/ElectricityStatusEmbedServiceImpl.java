@@ -7,11 +7,16 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import me.eeshe.grammyswrapped.model.ElectricityStatusEmbed;
 import me.eeshe.grammyswrapped.model.LocalizedMessage;
 import me.eeshe.grammyswrapped.model.UserElectricityStatus;
 import me.eeshe.grammyswrapped.repository.ElectricityStatusEmbedRepository;
 import me.eeshe.grammyswrapped.service.ElectricityStatusEmbedService;
+import me.eeshe.grammyswrapped.service.StatsService;
+import me.eeshe.grammyswrapped.util.AppConfig;
 import me.eeshe.grammyswrapped.util.EmbedUtil;
 import me.eeshe.grammyswrapped.util.TimeUtil;
 import net.dv8tion.jda.api.JDA;
@@ -27,14 +32,19 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.modals.Modal;
 
 public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbedService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElectricityStatusEmbedServiceImpl.class);
+
     private final JDA bot;
     private final ElectricityStatusEmbedRepository electricityStatusEmbedRepository;
+    private final StatsService statsService;
 
     public ElectricityStatusEmbedServiceImpl(
             JDA bot,
-            ElectricityStatusEmbedRepository electricityStatusEmbedRepository) {
+            ElectricityStatusEmbedRepository electricityStatusEmbedRepository,
+            StatsService statsService) {
         this.bot = bot;
         this.electricityStatusEmbedRepository = electricityStatusEmbedRepository;
+        this.statsService = statsService;
     }
 
     @Override
@@ -104,6 +114,19 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
 
         electricityStatusEmbedRepository.save(electricityStatusEmbed);
         updateElectricityStatusEmbed(electricityStatusEmbed);
+
+        statsService.logElectricityStatusChange(member.getUser(), false);
+        sendElectricityOutAlert(electricityStatusEmbed, userElectricityStatus);
+    }
+
+    private void sendElectricityOutAlert(
+            ElectricityStatusEmbed electricityStatusEmbed,
+            UserElectricityStatus userElectricityStatus) {
+        final String alertMessage = LocalizedMessage.ELECTRICITY_STATUS_ALERT_ELECTRICITY_OUT.getFormatted(
+                bot.getUserById(userElectricityStatus.getUserId()),
+                electricityStatusEmbed.createMessageLink());
+
+        sendElectricityAlert(alertMessage);
     }
 
     @Override
@@ -127,6 +150,36 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
 
         electricityStatusEmbedRepository.save(electricityStatusEmbed);
         updateElectricityStatusEmbed(electricityStatusEmbed);
+
+        statsService.logElectricityStatusChange(member.getUser(), true);
+        sendElectricityInAlert(userElectricityStatus);
+    }
+
+    private void sendElectricityInAlert(UserElectricityStatus userElectricityStatus) {
+        if (userElectricityStatus.getLastElectricityOutTime() == null) {
+            return;
+        }
+        final String alertMessage = LocalizedMessage.ELECTRICITY_STATUS_ALERT_ELECTRICITY_IN.getFormatted(
+                bot.getUserById(userElectricityStatus.getUserId()),
+                TimeUtil.formatHHMMTimestamp(userElectricityStatus.getLastElectricityOutTime().toEpochMilli()),
+                TimeUtil.formatHHMMTimestamp(userElectricityStatus.getLastElectricityInTime().toEpochMilli()),
+                TimeUtil.formatMilliseconds(userElectricityStatus.calculateLastElectricityOutageDuration().toMillis()));
+
+        sendElectricityAlert(alertMessage);
+    }
+
+    private void sendElectricityAlert(final String alertMessage) {
+        final String channelId = new AppConfig().getElectricityStatusChangeAlertChannelId();
+        if (channelId == null) {
+            LOGGER.warn("Electricity status alert channel ID not provided");
+            return;
+        }
+        final TextChannel alertChannel = bot.getTextChannelById(channelId);
+        if (alertChannel == null) {
+            LOGGER.warn("Invalid electricity status alert channel ID '{}'", channelId);
+            return;
+        }
+        alertChannel.sendMessage(alertMessage).queue();
     }
 
     private void updateElectricityStatusEmbed(ElectricityStatusEmbed electricityStatusEmbed) {
@@ -145,6 +198,7 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
                 generateEmbedDescription(new ArrayList<>(participants)))
                 .setFooter(LocalizedMessage.ELECTRICITY_STATUS_EMBED_FOOTER.get())
                 .setTimestamp(null)
+                .setThumbnail(LocalizedMessage.ELECTRICITY_STATUS_EMBED_IMAGE_URL.get())
                 .build();
     }
 

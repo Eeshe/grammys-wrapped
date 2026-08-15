@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.database.PostgreSQLDatabase;
+import me.eeshe.grammyswrapped.model.LoggableElectricityStatusChange;
 import me.eeshe.grammyswrapped.model.LoggableMessage;
 import me.eeshe.grammyswrapped.model.LoggablePresence;
 import me.eeshe.grammyswrapped.model.LoggableVoiceChatConnection;
@@ -29,6 +30,7 @@ public class StatsService {
   private static final String VOICE_CHAT_CONNECTIONS_TABLE = "voice_chat_connections";
   private static final String VOICE_CHAT_EVENTS_TABLE = "voice_chat_events";
   private static final String PRESENCES_TABLE = "presences";
+  private static final String ELECTRICITY_TABLE = "electricity_status_changes";
 
   private final PostgreSQLDatabase database;
 
@@ -41,6 +43,7 @@ public class StatsService {
     createVoiceChatConnectionsTable();
     createVoiceChatEventsTable();
     createPresencesTable();
+    createElectricityTable();
   }
 
   private void createMessagesTable() {
@@ -90,6 +93,16 @@ public class StatsService {
             "details TEXT, " +
             "large_image_text TEXT, " +
             "small_image_text TEXT" +
+            ")");
+  }
+
+  private void createElectricityTable() {
+    createTable(
+        "CREATE TABLE IF NOT EXISTS " + ELECTRICITY_TABLE + " (" +
+            "id BIGSERIAL PRIMARY KEY, " +
+            "user_id VARCHAR(255) NOT NULL, " +
+            "date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, " +
+            "electricity_in BOOL NOT NULL" +
             ")");
   }
 
@@ -186,6 +199,25 @@ public class StatsService {
       LOGGER.info("Successfully logged presence.");
     } catch (SQLException e) {
       LOGGER.error("Failed to log presence. Data: {}", loggablePresence, e);
+    }
+  }
+
+  public void logElectricityStatusChange(User user, boolean electricityIn) {
+    LoggableElectricityStatusChange loggableElectricityStatusChange = new LoggableElectricityStatusChange(
+        user.getId(),
+        electricityIn);
+    LOGGER.info("Logging electricity status change: {}", loggableElectricityStatusChange);
+
+    String sql = "INSERT INTO " + ELECTRICITY_TABLE + " (user_id, electricity_in) VALUES (?, ?)";
+    try (Connection connection = database.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setString(1, user.getId());
+      preparedStatement.setBoolean(2, electricityIn);
+
+      preparedStatement.executeUpdate();
+      LOGGER.info("Electricity status change logged.");
+    } catch (SQLException e) {
+      LOGGER.error("Failed to log electricity status change. Data: {}", loggableElectricityStatusChange, e);
     }
   }
 

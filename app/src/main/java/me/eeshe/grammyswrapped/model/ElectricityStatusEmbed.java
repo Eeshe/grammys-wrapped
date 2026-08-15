@@ -37,6 +37,13 @@ public class ElectricityStatusEmbed {
         this.updatedAt = updatedAt;
     }
 
+    public String createMessageLink() {
+        return String.format("https://discord.com/channels/%s/%s/%s",
+                guildId,
+                channelId,
+                messageId);
+    }
+
     public String getGuildId() {
         return guildId;
     }

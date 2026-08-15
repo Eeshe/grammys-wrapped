@@ -54,4 +54,8 @@ public class AppConfig {
   public String getTestGuildId() {
     return properties.getProperty("test-guild.id");
   }
+
+  public String getElectricityStatusChangeAlertChannelId() {
+      return properties.getProperty("electricity-status.alerts.channel-id");
+  }
 }

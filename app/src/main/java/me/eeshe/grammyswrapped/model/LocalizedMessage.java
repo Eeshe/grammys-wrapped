@@ -57,12 +57,16 @@ public enum LocalizedMessage {
     ELECTRICITY_STATUS_EMBED_DESCRIPTION_ESTIMATE_WITHOUT_ELECTRICITY(
             "electricity-status.embed.description.estimate.without-electricity"),
     ELECTRICITY_STATUS_EMBED_FOOTER("electricity-status.embed.footer"),
+    ELECTRICITY_STATUS_EMBED_IMAGE_URL("electricity-status.embed.image-url"),
     ELECTRICITY_STATUS_EMBED_ELECTRICITY_OUT_BUTTON("electricity-status.embed.electricity-out-button"),
     ELECTRICITY_STATUS_EMBED_ELECTRICITY_IN_BUTTON("electricity-status.embed.electricity-in-button"),
 
     ELECTRICITY_IN_MODAL_TITLE("electricity-in.modal.title"),
     ELECTRICITY_IN_MODAL_QUESTION("electricity-in.modal.question"),
     ELECTRICITY_IN_MODAL_QUESTION_PLACEHOLDER("electricity-in.modal.question-placeholder"),
+
+    ELECTRICITY_STATUS_ALERT_ELECTRICITY_OUT("electricity-status.alert.electricity-out"),
+    ELECTRICITY_STATUS_ALERT_ELECTRICITY_IN("electricity-status.alert.electricity-in"),
     ;
 
     private final String key;
