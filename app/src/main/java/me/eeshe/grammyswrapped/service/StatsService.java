@@ -23,7 +23,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.RichPresence;
 import net.dv8tion.jda.api.entities.User;
 
-public class StatsService {
+public class StatsService implements Service {
   private static final Logger LOGGER = LoggerFactory.getLogger(StatsService.class);
 
   private static final String MESSAGES_TABLE = "messages";
@@ -38,12 +38,22 @@ public class StatsService {
     this.database = PostgreSQLDatabase.getInstance();
   }
 
+  @Override
+  public void onBotStart() {
+    createStatsTables();
+  }
+
   public void createStatsTables() {
     createMessagesTable();
     createVoiceChatConnectionsTable();
     createVoiceChatEventsTable();
     createPresencesTable();
     createElectricityTable();
+  }
+
+
+  @Override
+  public void onBotStop() {
   }
 
   private void createMessagesTable() {

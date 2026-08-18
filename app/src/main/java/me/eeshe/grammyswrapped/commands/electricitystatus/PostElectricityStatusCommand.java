@@ -17,8 +17,6 @@ public class PostElectricityStatusCommand {
     }
 
     public void handle(SlashCommandInteractionEvent event) {
-        // TODO: Check permissions
-
         final String guildId = event.getGuild().getId();
         final String channelId = event.getChannelId();
 

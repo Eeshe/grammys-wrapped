@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +30,7 @@ import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.modals.Modal;
@@ -38,6 +42,9 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
     private final ElectricityStatusEmbedRepository electricityStatusEmbedRepository;
     private final StatsService statsService;
 
+    private ScheduledExecutorService electricityStatusEmbedUpdateScheduler;
+    private ScheduledExecutorService electricityStatusEmbedReminderScheduler;
+
     public ElectricityStatusEmbedServiceImpl(
             JDA bot,
             ElectricityStatusEmbedRepository electricityStatusEmbedRepository,
@@ -45,6 +52,79 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
         this.bot = bot;
         this.electricityStatusEmbedRepository = electricityStatusEmbedRepository;
         this.statsService = statsService;
+    }
+
+    @Override
+    public void onBotStart() {
+        startElectricityStatusEmbedUpdateScheduler();
+        startElectricityStatusEmbedReminderScheduler();
+    }
+
+    private void startElectricityStatusEmbedUpdateScheduler() {
+        this.electricityStatusEmbedUpdateScheduler = Executors.newScheduledThreadPool(1);
+        this.electricityStatusEmbedUpdateScheduler.scheduleAtFixedRate(
+                this::updateAllElectricityStatusEmbeds,
+                10L,
+                60L,
+                TimeUnit.SECONDS);
+    }
+
+    private void updateAllElectricityStatusEmbeds() {
+        for (ElectricityStatusEmbed embed : electricityStatusEmbedRepository.findAll()) {
+            updateElectricityStatusEmbed(embed);
+        }
+    }
+
+    private void startElectricityStatusEmbedReminderScheduler() {
+        this.electricityStatusEmbedReminderScheduler = Executors.newScheduledThreadPool(1);
+
+        this.electricityStatusEmbedReminderScheduler.scheduleAtFixedRate(
+                this::sendElectricityStatusEmbedReminders,
+                10L,
+                60L,
+                TimeUnit.SECONDS);
+    }
+
+    private void sendElectricityStatusEmbedReminders() {
+        for (ElectricityStatusEmbed embed : electricityStatusEmbedRepository.findAll()) {
+            boolean sentReminder = false;
+            for (UserElectricityStatus participant : embed.getParticipants().values()) {
+                if (participant.hasElectricity()) {
+                    continue;
+                }
+                if (participant.calculateTimeSinceLastReminder().toHours() < 2) {
+                    continue;
+                }
+                final User user = bot.getUserById(participant.getUserId());
+                if (user == null) {
+                    continue;
+                }
+                sentReminder = true;
+                LOGGER.info("Sending reminder to user '{}'", user.getName());
+                user.openPrivateChannel().queue(
+                        privateChannel -> {
+                            privateChannel.sendMessage(LocalizedMessage.ELECTRICITY_STATUS_REMINDER.getFormatted(
+                                    embed.createMessageLink())).queue();
+                            participant.setLastReminderTime(Instant.now());
+                            embed.addParticipant(participant);
+                        },
+                        error -> {
+                            LOGGER.error("Error sending reminder to {}. Message: {}",
+                                    user.getName(),
+                                    error.getMessage());
+                        });
+            }
+            if (!sentReminder) {
+                continue;
+            }
+            electricityStatusEmbedRepository.save(embed);
+        }
+    }
+
+    @Override
+    public void onBotStop() {
+        this.electricityStatusEmbedUpdateScheduler.shutdown();
+        this.electricityStatusEmbedReminderScheduler.shutdown();
     }
 
     @Override
@@ -124,7 +204,8 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
             UserElectricityStatus userElectricityStatus) {
         final String alertMessage = LocalizedMessage.ELECTRICITY_STATUS_ALERT_ELECTRICITY_OUT.getFormatted(
                 bot.getUserById(userElectricityStatus.getUserId()),
-                electricityStatusEmbed.createMessageLink());
+                TimeUtil.formatMilliseconds(
+                        userElectricityStatus.calculateTimeSinceLastElectricityOutage().toMillis()));
 
         sendElectricityAlert(alertMessage);
     }
@@ -184,11 +265,17 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
 
     private void updateElectricityStatusEmbed(ElectricityStatusEmbed electricityStatusEmbed) {
         final TextChannel textChannel = bot.getTextChannelById(electricityStatusEmbed.getChannelId());
-        textChannel.retrieveMessageById(electricityStatusEmbed.getMessageId()).queue(message -> {
-            message.editMessageEmbeds(
-                    createElectricityStatusEmbed(electricityStatusEmbed.getParticipants().values()))
-                    .queue();
-        });
+        textChannel.retrieveMessageById(electricityStatusEmbed.getMessageId()).queue(
+                message -> {
+                    message.editMessageEmbeds(
+                            createElectricityStatusEmbed(electricityStatusEmbed.getParticipants().values()))
+                            .queue();
+                },
+                error -> {
+                    LOGGER.error("Error updating embed with message ID {}. Message: {}",
+                            electricityStatusEmbed.getMessageId(),
+                            error.getMessage());
+                });
     }
 
     private MessageEmbed createElectricityStatusEmbed(Collection<UserElectricityStatus> participants) {

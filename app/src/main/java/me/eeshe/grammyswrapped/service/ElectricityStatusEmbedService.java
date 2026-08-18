@@ -5,7 +5,7 @@ import java.time.Instant;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 
-public interface ElectricityStatusEmbedService {
+public interface ElectricityStatusEmbedService extends Service {
 
     void postElectricityStatusEmbed(String guildId, String channelId);
 

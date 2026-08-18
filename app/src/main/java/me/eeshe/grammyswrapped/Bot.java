@@ -20,6 +20,7 @@ import me.eeshe.grammyswrapped.repository.YaVengoRepository;
 import me.eeshe.grammyswrapped.repository.impl.ElectricityStatusEmbedRepositoryImpl;
 import me.eeshe.grammyswrapped.service.ElectricityStatusEmbedService;
 import me.eeshe.grammyswrapped.service.LocalizationService;
+import me.eeshe.grammyswrapped.service.Service;
 import me.eeshe.grammyswrapped.service.StatsService;
 import me.eeshe.grammyswrapped.service.impl.ElectricityStatusEmbedServiceImpl;
 import me.eeshe.grammyswrapped.util.AppConfig;
@@ -42,6 +43,7 @@ public class Bot extends ListenerAdapter {
 
     private final ConcurrentHashMap<String, User> yaVengoTargets = new ConcurrentHashMap<>();
     private final List<Repository> repositories = new ArrayList<>();
+    private final List<Service> services = new ArrayList<>();
 
     private YaVengoRepository yaVengoRepository;
     private ElectricityStatusEmbedRepository electricityStatusEmbedRepository;
@@ -50,9 +52,6 @@ public class Bot extends ListenerAdapter {
     private ElectricityStatusEmbedService electricityStatusService;
 
     private JDA bot;
-
-    public Bot() {
-    }
 
     public void start() {
         AppConfig botConfig = new AppConfig();
@@ -97,11 +96,17 @@ public class Bot extends ListenerAdapter {
     private void initializeServices() {
         this.statsService = new StatsService();
         this.electricityStatusService = new ElectricityStatusEmbedServiceImpl(
-                bot, 
+                bot,
                 electricityStatusEmbedRepository,
                 statsService);
 
-        statsService.createStatsTables();
+        services.addAll(List.of(
+                statsService,
+                electricityStatusService));
+
+        for (Service service : services) {
+            service.onBotStart();
+        }
     }
 
     private void addListeners() {

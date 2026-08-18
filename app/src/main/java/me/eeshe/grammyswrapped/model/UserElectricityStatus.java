@@ -97,6 +97,13 @@ public class UserElectricityStatus {
         return Duration.between(lastElectricityInTime, Instant.now());
     }
 
+    public Duration calculateTimeSinceLastReminder() {
+        if (lastReminderTime == null) {
+            return Duration.ZERO;
+        }
+        return Duration.between(lastReminderTime, Instant.now());
+    }
+
     public Instant getLastReminderTime() {
         return lastReminderTime;
     }

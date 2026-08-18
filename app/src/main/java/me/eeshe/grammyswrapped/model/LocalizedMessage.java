@@ -67,6 +67,8 @@ public enum LocalizedMessage {
 
     ELECTRICITY_STATUS_ALERT_ELECTRICITY_OUT("electricity-status.alert.electricity-out"),
     ELECTRICITY_STATUS_ALERT_ELECTRICITY_IN("electricity-status.alert.electricity-in"),
+
+    ELECTRICITY_STATUS_REMINDER("electricity-status.reminder"),
     ;
 
     private final String key;
