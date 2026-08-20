@@ -51,7 +51,7 @@ public class UserElectricityStatus {
         final LocalDate lastElectricityOutDate = lastElectricityOutTime
                 .atZone(TimeUtil.getZoneId()).toLocalDate();
 
-        return lastElectricityOutDate.equals(LocalDate.now());
+        return lastElectricityOutDate.equals(LocalDate.now(TimeUtil.getZoneId()));
     }
 
     public String getUserId() {

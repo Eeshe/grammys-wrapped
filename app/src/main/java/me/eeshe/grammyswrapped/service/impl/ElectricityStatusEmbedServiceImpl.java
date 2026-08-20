@@ -87,7 +87,6 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
 
     private void sendElectricityStatusEmbedReminders() {
         for (ElectricityStatusEmbed embed : electricityStatusEmbedRepository.findAll()) {
-            boolean sentReminder = false;
             for (UserElectricityStatus participant : embed.getParticipants().values()) {
                 if (participant.hasElectricity()) {
                     continue;
@@ -99,14 +98,14 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
                 if (user == null) {
                     continue;
                 }
-                sentReminder = true;
                 LOGGER.info("Sending reminder to user '{}'", user.getName());
                 user.openPrivateChannel().queue(
                         privateChannel -> {
                             privateChannel.sendMessage(LocalizedMessage.ELECTRICITY_STATUS_REMINDER.getFormatted(
                                     embed.createMessageLink())).queue();
                             participant.setLastReminderTime(Instant.now());
-                            embed.addParticipant(participant);
+
+                            electricityStatusEmbedRepository.save(embed);
                         },
                         error -> {
                             LOGGER.error("Error sending reminder to {}. Message: {}",
@@ -114,10 +113,6 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
                                     error.getMessage());
                         });
             }
-            if (!sentReminder) {
-                continue;
-            }
-            electricityStatusEmbedRepository.save(embed);
         }
     }
 
