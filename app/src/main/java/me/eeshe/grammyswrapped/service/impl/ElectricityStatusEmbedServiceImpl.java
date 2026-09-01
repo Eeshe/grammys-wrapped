@@ -99,6 +99,7 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
                     continue;
                 }
                 LOGGER.info("Sending reminder to user '{}'", user.getName());
+                LOGGER.info("Time since last reminder: {}", participant.calculateTimeSinceLastReminder());
                 user.openPrivateChannel().queue(
                         privateChannel -> {
                             privateChannel.sendMessage(LocalizedMessage.ELECTRICITY_STATUS_REMINDER.getFormatted(
