@@ -74,36 +74,36 @@ public class TimeUtil {
         return LocalDate.now(getZoneId());
     }
 
-    public static void computeDailyVoiceChatTime(
-            Map<LocalDate, Duration> dailyVoiceChatTimeMap,
-            Date joinDate,
-            Date leaveDate) {
+    public static void computeDailyDuration(
+            Map<LocalDate, Duration> dailyDurationTime,
+            Date startDate,
+            Date endDate) {
         ZoneId zoneId = ZoneId.of(TIME_ZONE_ID);
-        ZonedDateTime zonedJoinDate = joinDate.toInstant().atZone(zoneId);
-        ZonedDateTime zonedLeaveDate = leaveDate.toInstant().atZone(zoneId);
+        ZonedDateTime zonedJoinDate = startDate.toInstant().atZone(zoneId);
+        ZonedDateTime zonedLeaveDate = endDate.toInstant().atZone(zoneId);
         if (zonedJoinDate.getDayOfYear() == zonedLeaveDate.getDayOfYear()) {
-            // User joined and left in the same day
-            addDailyVoiceChatTime(
-                    dailyVoiceChatTimeMap,
+            // Started and stop in the same day
+            addDailyDuration(
+                    dailyDurationTime,
                     zonedJoinDate.toLocalDate(),
                     Duration.between(zonedJoinDate, zonedLeaveDate));
         } else {
-            // User joined and left on different days
+            // Started and stop on different days
             ZonedDateTime startOfLeaveDate = zonedLeaveDate.toLocalDate().atStartOfDay(zoneId);
 
-            addDailyVoiceChatTime(
-                    dailyVoiceChatTimeMap,
+            addDailyDuration(
+                    dailyDurationTime,
                     zonedJoinDate.toLocalDate(),
                     Duration.between(zonedJoinDate, startOfLeaveDate));
 
-            addDailyVoiceChatTime(
-                    dailyVoiceChatTimeMap,
+            addDailyDuration(
+                    dailyDurationTime,
                     zonedLeaveDate.toLocalDate(),
                     Duration.between(startOfLeaveDate, zonedLeaveDate));
         }
     }
 
-    private static void addDailyVoiceChatTime(
+    private static void addDailyDuration(
             Map<LocalDate, Duration> dailyVoiceChatTimeMap,
             LocalDate localDate,
             Duration duration) {

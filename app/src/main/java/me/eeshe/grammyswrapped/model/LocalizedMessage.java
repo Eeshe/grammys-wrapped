@@ -22,6 +22,18 @@ public enum LocalizedMessage {
     GRAMMYS_WRAPPED_VOICE_CHAT_CHART_OVERALL_TITLE("wrapped.voice_chat.chart.overall_title"),
     GRAMMYS_WRAPPED_VOICE_CHAT_CHART_Y_AXIS("wrapped.voice_chat.chart.y_axis"),
     GRAMMYS_WRAPPED_VOICE_CHAT_CHART_X_AXIS("wrapped.voice_chat.chart.x_axis"),
+    GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TITLE("wrapped.electricity_status.title"),
+    GRAMMYS_WRAPPED_ELECTRICITY_STATUS_POWER_OUTAGES_LABEL("wrapped.electricity_status.power_outages_label"),
+    GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TOTAL_POWER_OUTAGE_TIME_OVERALL_LABEL(
+            "wrapped.electricity_status.total_power_outage_time_overall_label"),
+    GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TOTAL_POWER_OUTAGE_TIME_LABEL(
+            "wrapped.electricity_status.total_power_outage_time_label"),
+    GRAMMYS_WRAPPED_ELECTRICITY_STATUS_AVERAGE_POWER_OUTAGE_DURATION_LABEL(
+            "wrapped.electricity_status.average_power_outage_duration_label"),
+    GRAMMYS_WRAPPED_ELECTRICITY_STATUS_LONGEST_POWER_OUTAGE_LABEL(
+            "wrapped.electricity_status.longest_power_outage_label"),
+    GRAMMYS_WRAPPED_ELECTRICITY_STATUS_SHORTEST_POWER_OUTAGE_LABEL(
+            "wrapped.electricity_status.shortest_power_outage_label"),
 
     YA_VENGO_MODAL_TITLE("ya-vengo.modal.title"),
     YA_VENGO_MODAL_QUESTION("ya-vengo.modal.question"),

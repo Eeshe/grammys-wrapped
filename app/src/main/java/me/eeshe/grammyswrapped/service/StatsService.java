@@ -370,4 +370,35 @@ public class StatsService implements Service {
     LOGGER.info("Fetched {} presences from {} to {}.", presences.size(), startingDate, endingDate);
     return presences;
   }
+
+  public List<LoggableElectricityStatusChange> fetchElectricityStatusChanges(Date startingDate, Date endingDate) {
+    LOGGER.info("Fetching electricity status changes from {} to {}.", startingDate, endingDate);
+
+    List<LoggableElectricityStatusChange> electricityStatusChanges = new ArrayList<>();
+    String sql = "SELECT * FROM " + ELECTRICITY_TABLE + " WHERE date BETWEEN ? AND ? " +
+        "ORDER BY date ASC";
+    try (Connection connection = database.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setDate(1, new java.sql.Date(startingDate.getTime()));
+      preparedStatement.setDate(2, new java.sql.Date(endingDate.getTime()));
+
+      try (ResultSet resultSet = preparedStatement.executeQuery()) {
+        while (resultSet.next()) {
+          Date date = resultSet.getTimestamp("date");
+          String userId = resultSet.getString("user_id");
+          boolean electricityIn = resultSet.getBoolean("electricity_in");
+
+          electricityStatusChanges.add(new LoggableElectricityStatusChange(
+              date,
+              userId,
+              electricityIn));
+        }
+      }
+    } catch (SQLException e) {
+      LOGGER.error("Failed to fetch electricity status changes.", e);
+    }
+    LOGGER.info("Fetched {} electricity status changes from {} to {}", electricityStatusChanges.size(), startingDate,
+        endingDate);
+    return electricityStatusChanges;
+  }
 }

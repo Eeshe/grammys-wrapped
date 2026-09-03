@@ -18,17 +18,21 @@ import org.slf4j.LoggerFactory;
 
 import me.eeshe.grammyswrapped.model.ListenedArtist;
 import me.eeshe.grammyswrapped.model.LocalizedMessage;
+import me.eeshe.grammyswrapped.model.LoggableElectricityStatusChange;
 import me.eeshe.grammyswrapped.model.LoggableMessage;
 import me.eeshe.grammyswrapped.model.LoggablePresence;
 import me.eeshe.grammyswrapped.model.LoggableVoiceChatConnection;
 import me.eeshe.grammyswrapped.model.LoggableVoiceChatEvent;
+import me.eeshe.grammyswrapped.model.userdata.UserElectricityData;
 import me.eeshe.grammyswrapped.model.userdata.UserGameData;
 import me.eeshe.grammyswrapped.model.userdata.UserMessageData;
 import me.eeshe.grammyswrapped.model.userdata.UserMusicData;
 import me.eeshe.grammyswrapped.model.userdata.UserVoiceChatData;
 import me.eeshe.grammyswrapped.service.ChartService;
+import me.eeshe.grammyswrapped.service.ElectricityData;
 import me.eeshe.grammyswrapped.service.StatsService;
 import me.eeshe.grammyswrapped.service.VoiceChatData;
+import me.eeshe.grammyswrapped.service.userdata.UserElectricityDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserGameDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserMessageDataService;
 import me.eeshe.grammyswrapped.service.userdata.UserMusicDataService;
@@ -50,6 +54,7 @@ public class WrappedCommand {
     private final UserMusicDataService userMusicDataService;
     private final UserMessageDataService userMessageDataService;
     private final UserVoiceChatDataService userVoiceChatDataService;
+    private final UserElectricityDataService userElectricityDataService;
     private final ChartService chartService;
 
     public WrappedCommand(JDA bot, StatsService statsService) {
@@ -59,6 +64,7 @@ public class WrappedCommand {
         this.userMusicDataService = new UserMusicDataService(bot);
         this.userMessageDataService = new UserMessageDataService(bot);
         this.userVoiceChatDataService = new UserVoiceChatDataService(bot);
+        this.userElectricityDataService = new UserElectricityDataService(bot);
         this.chartService = new ChartService();
     }
 
@@ -94,6 +100,10 @@ public class WrappedCommand {
                 endingDate);
         List<LoggableVoiceChatEvent> loggedVoiceChatEvents = statsService.fetchVoiceChatEvents(startingDate,
                 endingDate);
+        List<LoggableElectricityStatusChange> loggedElectricityStatusChanges = statsService
+                .fetchElectricityStatusChanges(
+                        startingDate,
+                        endingDate);
 
         List<FileUpload> fileUploads = new ArrayList<>();
         try {
@@ -128,6 +138,12 @@ public class WrappedCommand {
                 endingDate,
                 loggedVoiceChatConnections,
                 loggedVoiceChatEvents);
+        sendElectricityStatusEmbeds(
+                responseChannel,
+                title,
+                startingDate,
+                endingDate,
+                loggedElectricityStatusChanges);
     }
 
     private Date parseDate(String dateString) {
@@ -282,4 +298,48 @@ public class WrappedCommand {
         textChannel.sendFiles(fileUploads).queue();
     }
 
+    private void sendElectricityStatusEmbeds(
+            TextChannel textChannel,
+            String title,
+            Date startingDate,
+            Date endingDate,
+            List<LoggableElectricityStatusChange> loggedVoiceChatConnections) {
+        ElectricityData electricityData = userElectricityDataService
+                .computeUserElectricityData(loggedVoiceChatConnections);
+        Map<String, UserElectricityData> userElectricityDataMap = electricityData.getUserElectricityData();
+        StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TITLE.get())
+                .append("\n");
+
+        final long totalPowerOutageTimeOverallMillis = electricityData.getUserElectricityData().values().stream()
+                .mapToLong(UserElectricityData::getPowerOutageTimeMillis).sum();
+        stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TOTAL_POWER_OUTAGE_TIME_OVERALL_LABEL
+                .getFormatted(TimeUtil.formatMilliseconds(totalPowerOutageTimeOverallMillis)))
+                .append("\n");
+
+        for (UserElectricityData userElectricityData : userElectricityDataMap.values()) {
+            String username = userElectricityData.getUser().getName();
+
+            stringBuilder.append("## ").append(username).append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_POWER_OUTAGES_LABEL.getFormatted(
+                    userElectricityData.getPowerOutages())).append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TOTAL_POWER_OUTAGE_TIME_LABEL
+                    .getFormatted(TimeUtil.formatMilliseconds(userElectricityData.getPowerOutageTimeMillis())))
+                    .append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_AVERAGE_POWER_OUTAGE_DURATION_LABEL
+                    .getFormatted(TimeUtil
+                            .formatMilliseconds(userElectricityData.calculateAveragePowerOutageDurationMillis())))
+                    .append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_LONGEST_POWER_OUTAGE_LABEL
+                    .getFormatted(TimeUtil
+                            .formatMilliseconds(userElectricityData.getLongestPowerOutageDurationMillis())))
+                    .append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_SHORTEST_POWER_OUTAGE_LABEL
+                    .getFormatted(TimeUtil
+                            .formatMilliseconds(userElectricityData.getShortestPowerOutageDurationMillis())))
+                    .append("\n");
+        }
+        MessageEmbed mainEmbed = EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString()).build();
+
+        textChannel.sendMessageEmbeds(mainEmbed).queue();
+    }
 }

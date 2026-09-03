@@ -42,7 +42,7 @@ public class UserVoiceChatData extends UserData {
 
     public void addVoiceChatTime(Date joinDate, Date leaveDate) {
         this.voiceChatTimeMillis += leaveDate.getTime() - joinDate.getTime();
-        TimeUtil.computeDailyVoiceChatTime(
+        TimeUtil.computeDailyDuration(
                 dailyVoiceChatTime,
                 joinDate,
                 leaveDate);
