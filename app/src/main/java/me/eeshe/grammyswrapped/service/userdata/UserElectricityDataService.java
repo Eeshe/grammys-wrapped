@@ -71,11 +71,6 @@ public class UserElectricityDataService {
                 if (previousElectricityStatusChange != null && !previousElectricityStatusChange.electricityIn()) {
                     // Previous electricity status change was in and current one is out, add voice
                     // chat time
-                    LOGGER.info("{}: {} -> {}",
-                            user.getName(),
-                            previousElectricityStatusChange.date(),
-                            electricityStatusChange.date());
-
                     userElectricityData.increasePowerOutages();
                     userElectricityData.addPowerOutageTime(
                             previousElectricityStatusChange.date(),

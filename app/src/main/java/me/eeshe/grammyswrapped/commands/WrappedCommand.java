@@ -163,7 +163,7 @@ public class WrappedCommand {
         StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_PLAYED_GAMES_TITLE.get())
                 .append("\n");
         for (UserGameData userGameData : userGameDataMap.values()) {
-            String username = userGameData.getUser().getName();
+            String username = userGameData.getUser().getAsMention();
 
             stringBuilder.append("### ").append(username).append("\n");
             for (Entry<String, Long> entry : userGameData.getPlayedGames().entrySet()) {
@@ -189,7 +189,7 @@ public class WrappedCommand {
         StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_LISTENED_MUSIC_TITLE.get())
                 .append("\n");
         for (UserMusicData userMusicData : userMusicDataMap.values()) {
-            String username = userMusicData.getUser().getName();
+            String username = userMusicData.getUser().getAsMention();
             List<ListenedArtist> listenedArtists = userMusicData.getListenedArtistsList();
             int totalListenedSongs = listenedArtists.stream()
                     .mapToInt(listenedArtist -> listenedArtist.getListenedSongs().size()).sum();
@@ -224,7 +224,7 @@ public class WrappedCommand {
                 .append("\n");
 
         for (UserMessageData userMessageData : userMessageDataMap.values()) {
-            String username = userMessageData.getUser().getName();
+            String username = userMessageData.getUser().getAsMention();
 
             stringBuilder.append("## ").append(username).append(" (").append(userMessageData.countOverallMessages())
                     .append(")\n");
@@ -273,7 +273,7 @@ public class WrappedCommand {
         fileUploads.add(FileUpload.fromData(Paths.get("overall.png")));
 
         for (UserVoiceChatData userVoiceChatData : userVoiceChatDataMap.values()) {
-            String username = userVoiceChatData.getUser().getName();
+            String username = userVoiceChatData.getUser().getAsMention();
 
             stringBuilder.append("## ").append(username).append("\n");
             stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_JOINED_VCS_LABEL.getFormatted(
@@ -310,36 +310,97 @@ public class WrappedCommand {
         StringBuilder stringBuilder = new StringBuilder(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TITLE.get())
                 .append("\n");
 
+        stringBuilder.append(generateOverallElectricityStatusString(electricityData));
+        for (UserElectricityData userData : userElectricityDataMap.values()) {
+            String username = userData.getUser().getAsMention();
+
+            stringBuilder.append("## ").append(username).append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_POWER_OUTAGES_LABEL.getFormatted(
+                    userData.getPowerOutages())).append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TOTAL_POWER_OUTAGE_TIME_LABEL
+                    .getFormatted(TimeUtil.formatMilliseconds(userData.getPowerOutageTimeMillis())))
+                    .append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_AVERAGE_POWER_OUTAGE_DURATION_LABEL
+                    .getFormatted(TimeUtil
+                            .formatMilliseconds(userData.calculateAveragePowerOutageDurationMillis())))
+                    .append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_LONGEST_POWER_OUTAGE_LABEL
+                    .getFormatted(TimeUtil
+                            .formatMilliseconds(userData.getLongestPowerOutageDurationMillis())))
+                    .append("\n");
+            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_SHORTEST_POWER_OUTAGE_LABEL
+                    .getFormatted(TimeUtil
+                            .formatMilliseconds(userData.getShortestPowerOutageDurationMillis())))
+                    .append("\n");
+        }
+        MessageEmbed mainEmbed = EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString()).build();
+
+        textChannel.sendMessageEmbeds(mainEmbed).queue();
+    }
+
+    private String generateOverallElectricityStatusString(ElectricityData electricityData) {
+        final StringBuilder stringBuilder = new StringBuilder();
+
+        final int totalPowerOutagesOverall = electricityData.getUserElectricityData().values().stream()
+                .mapToInt(UserElectricityData::getPowerOutages).sum();
+        stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_POWER_OUTAGES_OVERALL_LABEL
+                .getFormatted(totalPowerOutagesOverall))
+                .append("\n");
+
         final long totalPowerOutageTimeOverallMillis = electricityData.getUserElectricityData().values().stream()
                 .mapToLong(UserElectricityData::getPowerOutageTimeMillis).sum();
         stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TOTAL_POWER_OUTAGE_TIME_OVERALL_LABEL
                 .getFormatted(TimeUtil.formatMilliseconds(totalPowerOutageTimeOverallMillis)))
                 .append("\n");
 
-        for (UserElectricityData userElectricityData : userElectricityDataMap.values()) {
-            String username = userElectricityData.getUser().getName();
-
-            stringBuilder.append("## ").append(username).append("\n");
-            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_POWER_OUTAGES_LABEL.getFormatted(
-                    userElectricityData.getPowerOutages())).append("\n");
-            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TOTAL_POWER_OUTAGE_TIME_LABEL
-                    .getFormatted(TimeUtil.formatMilliseconds(userElectricityData.getPowerOutageTimeMillis())))
-                    .append("\n");
-            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_AVERAGE_POWER_OUTAGE_DURATION_LABEL
-                    .getFormatted(TimeUtil
-                            .formatMilliseconds(userElectricityData.calculateAveragePowerOutageDurationMillis())))
-                    .append("\n");
-            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_LONGEST_POWER_OUTAGE_LABEL
-                    .getFormatted(TimeUtil
-                            .formatMilliseconds(userElectricityData.getLongestPowerOutageDurationMillis())))
-                    .append("\n");
-            stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_SHORTEST_POWER_OUTAGE_LABEL
-                    .getFormatted(TimeUtil
-                            .formatMilliseconds(userElectricityData.getShortestPowerOutageDurationMillis())))
+        UserElectricityData longestPowerOutageData = null;
+        UserElectricityData shortestPowerOutageData = null;
+        UserElectricityData tarnishedAwardData = null;
+        for (UserElectricityData userData : electricityData.getUserElectricityData().values()) {
+            if (longestPowerOutageData == null
+                    || userData.getLongestPowerOutageDurationMillis() > longestPowerOutageData
+                            .getLongestPowerOutageDurationMillis()) {
+                longestPowerOutageData = userData;
+            }
+            if (shortestPowerOutageData == null
+                    || userData.getShortestPowerOutageDurationMillis() > shortestPowerOutageData
+                            .getShortestPowerOutageDurationMillis()) {
+                shortestPowerOutageData = userData;
+            }
+            if (tarnishedAwardData == null ||
+                    userData.getPowerOutageTimeMillis() > tarnishedAwardData.getPowerOutageTimeMillis()) {
+                tarnishedAwardData = userData;
+            }
+        }
+        if (longestPowerOutageData != null) {
+            stringBuilder
+                    .append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_LONGEST_POWER_OUTAGE_OVERALL_LABEL
+                            .getFormatted(
+                                    longestPowerOutageData.getUser().getAsMention(),
+                                    TimeUtil.formatMilliseconds(
+                                            longestPowerOutageData.getLongestPowerOutageDurationMillis())))
                     .append("\n");
         }
-        MessageEmbed mainEmbed = EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString()).build();
+        if (shortestPowerOutageData != null) {
+            stringBuilder
+                    .append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_SHORTEST_POWER_OUTAGE_OVERALL_LABEL
+                            .getFormatted(
+                                    shortestPowerOutageData.getUser().getAsMention(),
+                                    TimeUtil.formatMilliseconds(
+                                            shortestPowerOutageData.getShortestPowerOutageDurationMillis())))
+                    .append("\n");
+        }
+        if (tarnishedAwardData != null) {
+            stringBuilder
+                    .append(LocalizedMessage.GRAMMYS_WRAPPED_ELECTRICITY_STATUS_TARNISHED_AWARD_LABEL
+                            .getFormatted(
+                                    tarnishedAwardData.getUser().getAsMention(),
+                                    tarnishedAwardData.getPowerOutages(),
+                                    TimeUtil.formatMilliseconds(
+                                            tarnishedAwardData.getPowerOutageTimeMillis())))
+                    .append("\n");
 
-        textChannel.sendMessageEmbeds(mainEmbed).queue();
+        }
+        return stringBuilder.toString();
     }
 }
