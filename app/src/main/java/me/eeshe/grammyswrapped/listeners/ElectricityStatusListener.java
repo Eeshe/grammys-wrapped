@@ -6,6 +6,7 @@ import java.time.Instant;
 import me.eeshe.grammyswrapped.model.LocalizedMessage;
 import me.eeshe.grammyswrapped.service.ElectricityStatusEmbedService;
 import me.eeshe.grammyswrapped.util.TimeUtil;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
@@ -30,10 +31,21 @@ public class ElectricityStatusListener extends ListenerAdapter {
     public void onButtonInteraction(ButtonInteractionEvent event) {
         final String messageId = event.getMessageId();
         final String buttonId = event.getButton().getCustomId();
+        final Member member = event.getMember();
         if (buttonId.equals("electricity_in")) {
+            if (electricityStatusService.hasElectricity(messageId, member)) {
+                event.reply(LocalizedMessage.ELECTRICITY_STATUS_ALREADY_MARKED_ELECTRICITY_IN.get()).setEphemeral(true)
+                        .queue();
+                return;
+            }
             electricityStatusService.addElectricityInEntry(messageId, event.getMember());
             event.deferEdit().queue();
         } else if (buttonId.equals("electricity_out")) {
+            if (!electricityStatusService.hasElectricity(messageId, member)) {
+                event.reply(LocalizedMessage.ELECTRICITY_STATUS_ALREADY_MARKED_ELECTRICITY_OUT.get()).setEphemeral(true)
+                        .queue();
+                return;
+            }
             electricityStatusService.sendElectricityInEstimateModal(event);
         }
     }

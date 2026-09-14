@@ -124,6 +124,21 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
     }
 
     @Override
+    public boolean hasElectricity(String messageId, Member member) {
+        final ElectricityStatusEmbed electricityStatusEmbed = electricityStatusEmbedRepository
+                .getByMessageId(messageId);
+        if (electricityStatusEmbed == null) {
+            return false;
+        }
+        final UserElectricityStatus userElectricityStatus = electricityStatusEmbed
+                .getParticipant(member.getUser().getId());
+        if (userElectricityStatus == null) {
+            return false;
+        }
+        return userElectricityStatus.hasElectricity();
+    }
+
+    @Override
     public void postElectricityStatusEmbed(String guildId, String channelId) {
         final TextChannel textChannel = bot.getTextChannelById(channelId);
         if (textChannel == null) {
@@ -176,6 +191,9 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
         }
         final UserElectricityStatus userElectricityStatus = electricityStatusEmbed
                 .getParticipant(member.getUser().getId());
+        if (!userElectricityStatus.hasElectricity()) {
+            return;
+        }
         String nickname = member.getNickname();
         if (nickname == null) {
             nickname = member.getUser().getGlobalName();
@@ -215,6 +233,9 @@ public class ElectricityStatusEmbedServiceImpl implements ElectricityStatusEmbed
         }
         final UserElectricityStatus userElectricityStatus = electricityStatusEmbed
                 .getParticipant(member.getUser().getId());
+        if (userElectricityStatus.hasElectricity()) {
+            return;
+        }
         String nickname = member.getNickname();
         if (nickname == null) {
             nickname = member.getUser().getGlobalName();

@@ -82,6 +82,8 @@ public enum LocalizedMessage {
     ELECTRICITY_STATUS_EMBED_IMAGE_URL("electricity-status.embed.image-url"),
     ELECTRICITY_STATUS_EMBED_ELECTRICITY_OUT_BUTTON("electricity-status.embed.electricity-out-button"),
     ELECTRICITY_STATUS_EMBED_ELECTRICITY_IN_BUTTON("electricity-status.embed.electricity-in-button"),
+    ELECTRICITY_STATUS_ALREADY_MARKED_ELECTRICITY_IN("electricity-status.already-marked-electricity-in"),
+    ELECTRICITY_STATUS_ALREADY_MARKED_ELECTRICITY_OUT("electricity-status.already-marked-electricity-out"),
 
     ELECTRICITY_IN_MODAL_TITLE("electricity-in.modal.title"),
     ELECTRICITY_IN_MODAL_QUESTION("electricity-in.modal.question"),

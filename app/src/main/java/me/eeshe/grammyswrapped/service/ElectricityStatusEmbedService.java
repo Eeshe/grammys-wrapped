@@ -7,6 +7,8 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 
 public interface ElectricityStatusEmbedService extends Service {
 
+    boolean hasElectricity(String messageId, Member member);
+
     void postElectricityStatusEmbed(String guildId, String channelId);
 
     void sendElectricityInEstimateModal(ButtonInteractionEvent event);
