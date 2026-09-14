@@ -273,9 +273,9 @@ public class WrappedCommand {
         fileUploads.add(FileUpload.fromData(Paths.get("overall.png")));
 
         for (UserVoiceChatData userVoiceChatData : userVoiceChatDataMap.values()) {
-            String username = userVoiceChatData.getUser().getAsMention();
+            String userMention = userVoiceChatData.getUser().getAsMention();
 
-            stringBuilder.append("## ").append(username).append("\n");
+            stringBuilder.append("## ").append(userMention).append("\n");
             stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_JOINED_VCS_LABEL.getFormatted(
                     userVoiceChatData.getJoinedVoiceChats())).append("\n");
             stringBuilder.append(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_TOTAL_VC_TIME_LABEL.getFormatted(
@@ -289,7 +289,7 @@ public class WrappedCommand {
                     userVoiceChatData,
                     startingDate,
                     endingDate);
-            fileUploads.add(FileUpload.fromData(Paths.get(username + ".png")));
+            fileUploads.add(FileUpload.fromData(Paths.get(userVoiceChatData.getUser().getName() + ".png")));
         }
         MessageEmbed mainEmbed = EmbedUtil.createEmbed(Color.CYAN, title, stringBuilder.toString())
                 .setFooter(LocalizedMessage.GRAMMYS_WRAPPED_VOICE_CHAT_CHARTS_SENDING.get()).build();
@@ -363,7 +363,7 @@ public class WrappedCommand {
                 longestPowerOutageData = userData;
             }
             if (shortestPowerOutageData == null
-                    || userData.getShortestPowerOutageDurationMillis() > shortestPowerOutageData
+                    || userData.getShortestPowerOutageDurationMillis() < shortestPowerOutageData
                             .getShortestPowerOutageDurationMillis()) {
                 shortestPowerOutageData = userData;
             }
